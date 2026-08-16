@@ -1,4 +1,4 @@
-module github.com/namelessnotion/money_flow
+module github.com/namelessnotion/money_flow/go
 
 go 1.26.6
 

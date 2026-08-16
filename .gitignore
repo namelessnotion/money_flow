@@ -19,3 +19,6 @@
 
 # Go workspace file
 go.work
+
+# Locally built protoc plugins (see bin/generate_holder_proto.sh)
+go/.tools/

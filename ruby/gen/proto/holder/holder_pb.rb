@@ -4,31 +4,11 @@
 
 require 'google/protobuf'
 
-descriptor_data = "\n\x13holder/holder.proto\x12\x11money_flow.holder\"!\n\x04Memo\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t\"\xa2\x01\n\x0f\x45stablishHolder\x12\n\n\x02id\x18\x01 \x01(\t\x12<\n\x05memos\x18\x02 \x03(\x0b\x32-.money_flow.holder.EstablishHolder.MemosEntry\x1a\x45\n\nMemosEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12&\n\x05value\x18\x02 \x01(\x0b\x32\x17.money_flow.holder.Memo:\x02\x38\x01\"-\n\x11HolderEstablished\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04memo\x18\x02 \x01(\t\"k\n\x11\x41\x64\x64WalletToHolder\x12\n\n\x02id\x18\x01 \x01(\t\x12\x11\n\twallet_id\x18\x02 \x01(\t\x12\x0c\n\x04name\x18\x03 \x01(\t\x12)\n\x06\x61llows\x18\x04 \x01(\x0e\x32\x19.money_flow.holder.Allows\"k\n\x11HolderAddedWallet\x12\n\n\x02id\x18\x01 \x01(\t\x12\x11\n\twallet_id\x18\x02 \x01(\t\x12\x0c\n\x04name\x18\x03 \x01(\t\x12)\n\x06\x61llows\x18\x04 \x01(\x0e\x32\x19.money_flow.holder.Allows\"E\n\x14HolderRejectedWallet\x12\n\n\x02id\x18\x01 \x01(\t\x12\x11\n\twallet_id\x18\x02 \x01(\t\x12\x0e\n\x06reason\x18\x03 \x01(\t\"\x1c\n\x0eHolderResponse\x12\n\n\x02id\x18\x01 \x01(\t*S\n\x06\x41llows\x12\x11\n\rTRANSFER_ONLY\x10\x00\x12\x16\n\x12HALF_TRANSFER_ONLY\x10\x01\x12\x1e\n\x1aHALF_TRANSFER_AND_TRANSFER\x10\x02\x32\xb6\x01\n\x06Holder\x12T\n\tEstablish\x12\".money_flow.holder.EstablishHolder\x1a!.money_flow.holder.HolderResponse\"\x00\x12V\n\tAddWallet\x12$.money_flow.holder.AddWalletToHolder\x1a!.money_flow.holder.HolderResponse\"\x00\x42:Z8github.com/namelessnotion/money_flow/go/gen/proto/holderb\x06proto3"
 
-pool = Google::Protobuf::DescriptorPool.generated_pool
+descriptor_data = "\n\x13holder/holder.proto\x12\x11money_flow.holder\"!\n\x04Memo\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t\"\xa2\x01\n\x0f\x45stablishHolder\x12\n\n\x02id\x18\x01 \x01(\t\x12<\n\x05memos\x18\x02 \x03(\x0b\x32-.money_flow.holder.EstablishHolder.MemosEntry\x1a\x45\n\nMemosEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12&\n\x05value\x18\x02 \x01(\x0b\x32\x17.money_flow.holder.Memo:\x02\x38\x01\"\xa6\x01\n\x11HolderEstablished\x12\n\n\x02id\x18\x01 \x01(\t\x12>\n\x05memos\x18\x02 \x03(\x0b\x32/.money_flow.holder.HolderEstablished.MemosEntry\x1a\x45\n\nMemosEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12&\n\x05value\x18\x02 \x01(\x0b\x32\x17.money_flow.holder.Memo:\x02\x38\x01\"k\n\x11\x41\x64\x64WalletToHolder\x12\n\n\x02id\x18\x01 \x01(\t\x12\x11\n\twallet_id\x18\x02 \x01(\t\x12\x0c\n\x04name\x18\x03 \x01(\t\x12)\n\x06\x61llows\x18\x04 \x01(\x0e\x32\x19.money_flow.holder.Allows\"k\n\x11HolderAddedWallet\x12\n\n\x02id\x18\x01 \x01(\t\x12\x11\n\twallet_id\x18\x02 \x01(\t\x12\x0c\n\x04name\x18\x03 \x01(\t\x12)\n\x06\x61llows\x18\x04 \x01(\x0e\x32\x19.money_flow.holder.Allows\"E\n\x14HolderRejectedWallet\x12\n\n\x02id\x18\x01 \x01(\t\x12\x11\n\twallet_id\x18\x02 \x01(\t\x12\x0e\n\x06reason\x18\x03 \x01(\t\"s\n\x17HolderEstablishResponse\x12\n\n\x02id\x18\x01 \x01(\t\x12\x42\n\x12holder_established\x18\x02 \x01(\x0b\x32$.money_flow.holder.HolderEstablishedH\x00\x42\x08\n\x06result\"\xbf\x01\n\x17HolderAddWalletResponse\x12\n\n\x02id\x18\x01 \x01(\t\x12\x43\n\x13holder_added_wallet\x18\x02 \x01(\x0b\x32$.money_flow.holder.HolderAddedWalletH\x00\x12I\n\x16holder_rejected_wallet\x18\x03 \x01(\x0b\x32\'.money_flow.holder.HolderRejectedWalletH\x00\x42\x08\n\x06result*S\n\x06\x41llows\x12\x11\n\rTRANSFER_ONLY\x10\x00\x12\x16\n\x12HALF_TRANSFER_ONLY\x10\x01\x12\x1e\n\x1aHALF_TRANSFER_AND_TRANSFER\x10\x02\x32\xc8\x01\n\x06Holder\x12]\n\tEstablish\x12\".money_flow.holder.EstablishHolder\x1a*.money_flow.holder.HolderEstablishResponse\"\x00\x12_\n\tAddWallet\x12$.money_flow.holder.AddWalletToHolder\x1a*.money_flow.holder.HolderAddWalletResponse\"\x00\x42:Z8github.com/namelessnotion/money_flow/go/gen/proto/holderb\x06proto3"
 
-begin
-  pool.add_serialized_file(descriptor_data)
-rescue TypeError
-  # Compatibility code: will be removed in the next major version.
-  require 'google/protobuf/descriptor_pb'
-  parsed = Google::Protobuf::FileDescriptorProto.decode(descriptor_data)
-  parsed.clear_dependency
-  serialized = parsed.class.encode(parsed)
-  file = pool.add_serialized_file(serialized)
-  warn "Warning: Protobuf detected an import path issue while loading generated file #{__FILE__}"
-  imports = [
-  ]
-  imports.each do |type_name, expected_filename|
-    import_file = pool.lookup(type_name).file_descriptor
-    if import_file.name != expected_filename
-      warn "- #{file.name} imports #{expected_filename}, but that import was loaded as #{import_file.name}"
-    end
-  end
-  warn "Each proto file must use a consistent fully-qualified name."
-  warn "This will become an error in the next major version."
-end
+pool = ::Google::Protobuf::DescriptorPool.generated_pool
+pool.add_serialized_file(descriptor_data)
 
 module MoneyFlow
   module Holder
@@ -38,7 +18,8 @@ module MoneyFlow
     AddWalletToHolder = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("money_flow.holder.AddWalletToHolder").msgclass
     HolderAddedWallet = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("money_flow.holder.HolderAddedWallet").msgclass
     HolderRejectedWallet = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("money_flow.holder.HolderRejectedWallet").msgclass
-    HolderResponse = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("money_flow.holder.HolderResponse").msgclass
+    HolderEstablishResponse = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("money_flow.holder.HolderEstablishResponse").msgclass
+    HolderAddWalletResponse = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("money_flow.holder.HolderAddWalletResponse").msgclass
     Allows = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("money_flow.holder.Allows").enummodule
   end
 end
