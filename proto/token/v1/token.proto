@@ -1,0 +1,40 @@
+syntax = "proto3";
+package token.v1;
+option go_package = "github.com/namelessnotion/money_flow/go/gen/proto/token/v1";
+
+import "shared/v1/money.proto";
+
+// A Token's balance-affecting activity (debit/credit intent) is recorded on
+// the Operation aggregate's event stream, not here — see operation.proto.
+// Token only owns its own lifecycle: it is minted into a Wallet with a fixed
+// capacity, backed 1:1 by a TigerBeetle account on the shared ledger.
+
+message MintRequest {
+  string id = 1;
+  string wallet_id = 2;
+  shared.v1.Money capacity = 3;
+}
+
+message TokenMinted {
+  string id = 1;
+  string wallet_id = 2;
+  shared.v1.Money capacity = 3;
+}
+
+message TokenMintRejected {
+  string id = 1;
+  string wallet_id = 2;
+  string reason = 3;
+}
+
+message MintResponse {
+  string id = 1;
+  oneof result {
+    TokenMinted token_minted = 2;
+    TokenMintRejected token_mint_rejected = 3;
+  }
+}
+
+service TokenService {
+  rpc Mint(MintRequest) returns (MintResponse) {}
+}

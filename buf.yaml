@@ -1,0 +1,3 @@
+version: v2
+modules:
+  - path: proto # Change this to the subfolder where your files live

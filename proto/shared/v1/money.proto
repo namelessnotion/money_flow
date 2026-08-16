@@ -1,0 +1,12 @@
+syntax = "proto3";
+package shared.v1;
+
+option go_package = "github.com/namelessnotion/money_flow/go/gen/proto/shared/v1";
+
+// Money is always an integer amount in the currency's smallest unit
+// (e.g. cents for USD) so it maps 1:1 onto Token capacity and TigerBeetle
+// account amounts without floating point drift.
+message Money {
+  uint64 minor_units = 1;
+  string currency = 2;
+}
