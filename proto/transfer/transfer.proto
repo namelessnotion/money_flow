@@ -1,0 +1,148 @@
+syntax = "proto3";
+
+option go_package = "github.com/namelessnotion/money_flow/go/gen/proto/transfer";
+package money_flow.transfer;
+
+import "shared/money.proto";
+
+// A Transfer moves an amount from a Source Wallet to a Destination Wallet.
+// It never moves money directly between existing Tokens: a new Token is
+// minted in the destination Wallet for the transferred amount, and one or
+// more Operations then move capacity out of the source Wallet's existing
+// Token(s) into that new Token's TigerBeetle account — this is what keeps
+// money's provenance traceable instead of commingled within a Wallet.
+message RequestTransfer {
+  string id = 1;
+  string from_wallet_id = 2;
+  string to_wallet_id = 3;
+  money_flow.shared.Money amount = 4;
+}
+
+message TransferRequestAccepted {
+  string id = 1;
+  string from_wallet_id = 2;
+  string to_wallet_id = 3;
+  money_flow.shared.Money amount = 4;
+  // Token newly minted in the destination Wallet to receive the amount.
+  string to_token_id = 5;
+  // One DEBIT Operation per source Token debited to fund to_token_id; more
+  // than one is needed when a single source Token's capacity can't cover
+  // the full amount. All must complete before credit_operation_id performs.
+  repeated string debit_operation_ids = 6;
+  // CREDIT Operation into to_token_id; only performs once every Operation
+  // in debit_operation_ids has completed.
+  string credit_operation_id = 7;
+}
+
+message TransferRequestRejected {
+  string id = 1;
+  string reason = 2;
+}
+
+message RequestTransferResponse {
+  string id = 1;
+  oneof result {
+    TransferRequestAccepted transfer_request_accepted = 2;
+    TransferRequestRejected transfer_request_rejected = 3;
+  }
+}
+
+message CancelAcceptedTransfer {
+  string id = 1;
+  string reason = 2;
+}
+
+message AcceptedTransferCancelled {
+  string id = 1;
+  string reason = 2;
+}
+
+message CancelAcceptedTransferResponse {
+  string id = 1;
+  oneof result {
+    AcceptedTransferCancelled accepted_transfer_cancelled = 2;
+  }
+}
+
+// The remaining commands/events step the Transfer saga through preparing,
+// committing, cancelling and compensating its underlying Operations. These
+// are driven internally by the Transfer process manager as Operations
+// report progress, not called directly over RPC.
+
+message StartPreparingTransfer {
+  string id = 1;
+}
+
+message PreparingTransferStarted {
+  string id = 1;
+}
+
+message CompletePreparingTransfer {
+  string id = 1;
+}
+
+message TransferPrepared {
+  string id = 1;
+}
+
+message StartCancellingPreparedTransfer {
+  string id = 1;
+  string reason = 2;
+}
+
+message CancellingPreparedTransferStarted {
+  string id = 1;
+  string reason = 2;
+}
+
+message CompleteCancellingPreparedTransfer {
+  string id = 1;
+}
+
+message PreparedTransferCancelled {
+  string id = 1;
+}
+
+message StartCompensatingFailedTransfer {
+  string id = 1;
+  string reason = 2;
+}
+
+message FailedTransferCompensationStarted {
+  string id = 1;
+  string reason = 2;
+}
+
+message CompleteCompensatingFailedTransfer {
+  string id = 1;
+}
+
+message TransferFailed {
+  string id = 1;
+}
+
+message StartCommittingTransfer {
+  string id = 1;
+}
+
+message TransferCommittingStarted {
+  string id = 1;
+}
+
+// This is where debit_operation_ids are submitted to TigerBeetle together as
+// one linked transfer chain — atomic commit or atomic rejection, so there's
+// no partially-applied state to compensate for here. Once TigerBeetle
+// confirms the chain, credit_operation_id performs (bookkeeping only, see
+// operation.proto) and TransferCommitted fires.
+message CommitTransfer {
+  string id = 1;
+}
+
+message TransferCommitted {
+  string id = 1;
+}
+
+service Transfer {
+  rpc Request(RequestTransfer) returns (RequestTransferResponse) {}
+  rpc CancelAccepted(CancelAcceptedTransfer) returns (CancelAcceptedTransferResponse) {}
+}

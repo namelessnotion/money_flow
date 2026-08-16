@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package money_flow.operation;
+
+option go_package = "github.com/namelessnotion/money_flow/go/gen/proto/operation";
+
+import "shared/money.proto";
+
+// types
+enum Operator {
+  CREDIT = 0;
+  DEBIT = 1;
+}
+
+// domain commands/events
+
+// An Operation is one leg of a Transfer, and this is where the intent of a
+// credit/debit is recorded in the event log before the actual TigerBeetle
+// transfer is submitted.
+//
+// A DEBIT Operation maps 1:1 onto a single TigerBeetle Transfer: debit_account
+// = token_id's TigerBeetle account, credit_account = counterparty_token_id's
+// TigerBeetle account (the Transfer's newly minted destination Token). All of
+// a Transfer's DEBIT Operations are submitted to TigerBeetle together as one
+// linked chain, so they commit or fail atomically — no partial application,
+// no compensation needed for that failure mode.
+//
+// A CREDIT Operation does not touch TigerBeetle itself — the destination
+// Token's balance already landed as the credit side of each linked DEBIT
+// transfer. It's the confirmation event recorded once every DEBIT Operation
+// for the Transfer has completed, marking the destination Token (token_id)
+// as fully funded; counterparty_token_id is unused for CREDIT.
+message InitiateOperation {
+  string id = 1;
+  string transfer_id = 2;
+  string token_id = 3;
+  string counterparty_token_id = 4;
+  Operator operator = 5;
+  money_flow.shared.Money amount = 6;
+}
+
+message OperationInitiated {
+  string id = 1;
+  string transfer_id = 2;
+  string token_id = 3;
+  string counterparty_token_id = 4;
+  Operator operator = 5;
+  money_flow.shared.Money amount = 6;
+}
+
+message OperationRejected {
+  string id = 1;
+  string transfer_id = 2;
+  string reason = 3;
+}
+
+message InitiateOperationResponse {
+  string id = 1;
+  oneof result {
+    OperationInitiated operation_initiated = 2;
+    OperationRejected operation_rejected = 3;
+  }
+}
+
+message CancelOperation {
+  string id = 1;
+  string reason = 2;
+}
+
+message OperationCancelled {
+  string id = 1;
+  string reason = 2;
+}
+
+message CancelOperationResponse {
+  string id = 1;
+  oneof result {
+    OperationCancelled operation_cancelled = 2;
+  }
+}
+
+// Not called per-Operation: the Transfer process manager submits every
+// DEBIT Operation for a Transfer in one linked TigerBeetle batch, then
+// issues PerformOperation to each once the batch outcome is known (and to
+// the CREDIT Operation once all of those have performed).
+message PerformOperation {
+  string id = 1;
+}
+
+// For DEBIT, recorded once this Operation's TigerBeetle transfer was part of
+// a linked batch that committed; TigerBeetle remains the source of truth for
+// the resulting balance. For CREDIT, recorded once every DEBIT Operation on
+// the Transfer has performed.
+message OperationPerformed {
+  string id = 1;
+}
+
+message OperationFailed {
+  string id = 1;
+  string reason = 2;
+}
+
+// Perform is intentionally not exposed here — see PerformOperation above.
+service Operation {
+  rpc Initiate(InitiateOperation) returns (InitiateOperationResponse) {}
+  rpc Cancel(CancelOperation) returns (CancelOperationResponse) {}
+}

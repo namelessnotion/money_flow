@@ -1,0 +1,182 @@
+syntax = "proto3";
+
+option go_package = "github.com/namelessnotion/money_flow/go/gen/proto/transaction";
+package money_flow.transaction;
+
+import "shared/money.proto";
+
+/***********/
+/** Types **/
+/***********/
+
+message Memo {
+  string id = 1;
+  string value = 2;
+}
+
+/* Transaction representation of a Transfer prior to it being requested. We can not use
+ messages defined in the Root Aggregate Transfer proto as that is a seperate Root Aggregate and we
+ can't cross that boundary. Transfer does expose the interface for requesting a Transfer and we can
+ use that knowledge to know what information needs to be placed here. Additional information can be
+ added here that only applies to Transaction Root Aggregate as well. */
+
+// NOTE: When we say Transfer inside of Transaction we are referring to this message,
+// which eventual can be used to effectively map to the Root Aggregate Transfer.
+message Transfer {
+  string id = 1;
+  money_flow.shared.Money amount = 2;
+  string from_wallet_id = 3;
+  string to_wallet_id = 4;
+  bool auto_process = 5; // automatically process or wait for external StartProcessing
+  // auto_process does not go in the transfer.proto because auto processing only makes
+  // sense in the context of a Transaction and only a Transaction can determine if all
+  // deps are met for a Transfer to start processing
+}
+
+// ******************************
+// * Domain Commands and Events *
+// ******************************
+
+/* Command to build out a Financial Transaction */
+message StartInitializingTransaction {
+  string id = 1;
+  string external_guid = 2;
+  string factory_name = 3;
+  string factory_version = 4;
+
+  // Ability to add and remove assets from the system
+  // onramp_manifest repeated (wallet, amount to deposit)
+  // offramp_manifest repeated (wallet, amount to withdrawal)
+
+  // keyed by the Transfer's own id, so we can do dependency mapping based on id
+  map <string, Transfer> transfers = 6;
+
+  map <string, string> transfer_dependency = 7;
+
+  /***
+    Rules:
+     - A Transfer can not be directly or indirectly depedent on it self
+
+     - one to one
+
+     { B => [A] }
+
+    - many to one
+
+    The order in which A, B and C are processed doesn't matter
+    { D => [A, B, C] }   =>  D is dep on A, B and C
+
+    if order mattered you just make B dep on A to make sure A comes before B but doesn't matter if C comes before A
+
+    { D => [A, B, C],
+      B => [A] }
+
+    it could also be simplified
+
+    { D => [B, C],
+      B => [A] }
+
+    - one to many
+
+    A gets processed first
+    { B => [A],
+      C => [A],
+      D => [A] }
+
+    inverse of dep map would show that A triggers B,C,D
+
+    if ordered mattered
+    A gets processed first
+    { B => [A, C],
+      C => [A, D],
+      D => [A] }
+
+      which just simplified to
+
+      { B => [C],
+        C => [D],
+        D => [A] }
+
+    - many to many(ish)
+
+    A, B, C, D
+
+    W, X, Y, X
+
+    N
+
+    dep mapping:
+    { N => [A, B, C, D],
+      W => [N],
+      X => [N],
+      Y => [N],
+      Z => [N] }
+
+    trigger/spawn mapping:
+    { [A, B, C, D] => N,
+      [N] => W,
+      [N] => X,
+      [N] => Y,
+      [N] => Z }
+
+    NOTE: map<string, string> only expresses a single dependency per key, so a
+    many-to-one dependency (D on A, B, C) has to be encoded as the chain
+    simplification above (D => C, C => B, B => A) rather than listed directly.
+    If that turns out to be too limiting once Transaction design resumes,
+    switch transfer_dependency to map<string, TransferIdList> instead.
+  */
+}
+
+message TransactionInitialized {
+  string id = 1;
+  map <string, Memo> memos = 2;
+
+  // Ability to add and remove assets from the system
+  // onramp_manifest repeated (wallet, amount to deposit)
+  // offramp_manifest repeated (wallet, amount to withdrawal)
+
+  // keyed by the Transfer's own id, so we can do dependency mapping based on id
+  map <string, Transfer> transfers = 6;
+
+  map <string, string> transfer_dependency = 7;
+}
+
+message StartBuildingTransaction {
+  string id = 1;
+}
+
+message TransactionBuildingStarted {
+  string id = 1;
+}
+
+message CompleteBuildingTransaction {
+  string id = 1;
+}
+
+message TransactionBuilt {
+  string id = 1;
+}
+
+message StartTransaction {
+  string id = 1;
+}
+
+message TransactionStarted {
+  string id = 1;
+}
+
+message TransactionCompleted {
+  string id = 1;
+}
+
+message StartTransactionRollback {
+  string id = 1;
+}
+
+message TransactionRollbackStarted {
+  string id = 1;
+}
+
+message TransactionRolledBack {
+  string id = 1;
+}

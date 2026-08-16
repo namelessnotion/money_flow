@@ -1,0 +1,41 @@
+syntax = "proto3";
+package money_flow.wallet;
+option go_package = "github.com/namelessnotion/money_flow/go/gen/proto/wallet";
+
+enum Allows {
+  TRANSFER_ONLY = 0;
+  HALF_TRANSFER_ONLY = 1;
+  HALF_TRANSFER_AND_TRANSFER = 2;
+}
+
+message OpenWallet {
+  string id = 1;
+  string holder_id = 2;
+  string name = 3;
+  Allows allows = 4;
+}
+
+message WalletOpened {
+  string id = 1;
+  string holder_id = 2;
+  string name = 3;
+  Allows allows = 4;
+}
+
+message WalletRejected {
+  string id = 1;
+  string holder_id = 2;
+  string reason = 3;
+}
+
+message OpenWalletResponse {
+  string id = 1;
+  oneof result {
+    WalletOpened wallet_opened = 2;
+    WalletRejected wallet_rejected = 3;
+  }
+}
+
+service Wallet {
+  rpc Open(OpenWallet) returns (OpenWalletResponse) {}
+}

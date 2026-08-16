@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: money_flow
+      POSTGRES_PASSWORD: money_flow
+      POSTGRES_DB: money_flow_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - money_flow_postgres:/var/lib/postgresql/data
+
+volumes:
+  money_flow_postgres:

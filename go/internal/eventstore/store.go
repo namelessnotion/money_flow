@@ -1,0 +1,70 @@
+// Package eventstore is the append-only, immutable log of Domain Events for
+// every aggregate (Holder, Wallet, Token, Transfer, Operation). It is the
+// source of truth for intent; TigerBeetle remains the source of truth for
+// account balances.
+package eventstore
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
+)
+
+// ErrConcurrencyConflict is returned by Append when expectedSeq no longer
+// matches the aggregate's actual last sequence — some other writer appended
+// to the same stream first. Callers should reload the aggregate and retry
+// the command against current state.
+var ErrConcurrencyConflict = errors.New("eventstore: concurrent append")
+
+// Event is one row of the log: a Domain Event that has already happened,
+// exactly as recorded — never mutated after the fact.
+type Event struct {
+	GlobalSeq     int64
+	AggregateType string
+	AggregateID   string
+	Sequence      int64
+	EventType     string
+	Payload       []byte
+	OccurredAt    time.Time
+}
+
+// Decode unmarshals the event payload into a fresh instance of its proto
+// message type, looked up by EventType in the global registry. The event's
+// generated Go package must be linked into the binary (a plain import is
+// enough) so its message types are registered.
+func (e Event) Decode() (proto.Message, error) {
+	mt, err := protoregistry.GlobalTypes.FindMessageByName(protoreflect.FullName(e.EventType))
+	if err != nil {
+		return nil, fmt.Errorf("eventstore: unknown event type %q: %w", e.EventType, err)
+	}
+	msg := mt.New().Interface()
+	if err := proto.Unmarshal(e.Payload, msg); err != nil {
+		return nil, fmt.Errorf("eventstore: unmarshal %q: %w", e.EventType, err)
+	}
+	return msg, nil
+}
+
+// Store appends to and loads from aggregates' event streams. Implementations
+// must be safe for concurrent use.
+type Store interface {
+	// Append writes events to (aggregateType, aggregateID)'s stream as a
+	// single atomic batch, sequenced immediately after expectedSeq (0 for a
+	// brand new aggregate). It fails with ErrConcurrencyConflict if the
+	// caller's view of expectedSeq is stale.
+	Append(ctx context.Context, aggregateType, aggregateID string, expectedSeq int64, events ...proto.Message) error
+
+	// Load returns every event in (aggregateType, aggregateID)'s stream,
+	// oldest first. An aggregate that doesn't exist yet returns (nil, nil).
+	Load(ctx context.Context, aggregateType, aggregateID string) ([]Event, error)
+}
+
+// EventType returns the fully-qualified proto message name used as the
+// event_type column and looked up by Event.Decode.
+func EventType(m proto.Message) string {
+	return string(m.ProtoReflect().Descriptor().FullName())
+}

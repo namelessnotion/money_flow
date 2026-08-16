@@ -1,0 +1,64 @@
+syntax = "proto3";
+package money_flow.holder;
+option go_package = "github.com/namelessnotion/money_flow/go/gen/proto/holder";
+
+message Memo {
+  string id = 1;
+  string value = 2;
+}
+
+enum Allows {
+  TRANSFER_ONLY = 0;
+  HALF_TRANSFER_ONLY = 1;
+  HALF_TRANSFER_AND_TRANSFER = 2;
+}
+
+message EstablishHolder {
+  string id =  1;
+  map <string, Memo> memos = 2;
+}
+
+message HolderEstablished {
+  string id = 1;
+  map <string, Memo> memos = 2;
+}
+
+message AddWalletToHolder {
+  string id = 1;
+  string wallet_id = 2;
+  string name = 3;
+  Allows allows = 4;
+}
+
+message HolderAddedWallet {
+  string id = 1;
+  string wallet_id = 2;
+  string name = 3;
+  Allows allows = 4;
+}
+
+message HolderRejectedWallet {
+  string id = 1;
+  string wallet_id = 2;
+  string reason = 3;
+}
+
+message HolderEstablishResponse {
+  string id = 1;
+  oneof result {
+   HolderEstablished holder_established = 2; 
+  }
+}
+
+message HolderAddWalletResponse {
+  string id = 1;
+  oneof result {
+    HolderAddedWallet holder_added_wallet = 2;
+    HolderRejectedWallet holder_rejected_wallet = 3;
+  }
+}
+
+service Holder {
+  rpc Establish(EstablishHolder) returns (HolderEstablishResponse) {}
+  rpc AddWallet(AddWalletToHolder) returns (HolderAddWalletResponse) {}
+}

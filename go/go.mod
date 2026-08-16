@@ -1,0 +1,27 @@
+module github.com/namelessnotion/money_flow
+
+go 1.26.6
+
+tool (
+	github.com/arthurnn/twirp-ruby/protoc-gen-twirp_ruby
+	github.com/twitchtv/twirp/protoc-gen-twirp
+	google.golang.org/protobuf/cmd/protoc-gen-go
+)
+
+require (
+	github.com/jackc/pgx/v5 v5.10.0
+	google.golang.org/protobuf v1.36.12
+)
+
+require (
+	github.com/arthurnn/twirp-ruby v1.14.1 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
+	github.com/jackc/puddle/v2 v2.2.2 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+	github.com/twitchtv/twirp v8.1.3+incompatible // indirect
+	golang.org/x/sync v0.18.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
+)
