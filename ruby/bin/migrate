@@ -1,0 +1,23 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative '../lib/boot'
+require 'sequel/extensions/migration'
+
+MIGRATIONS_DIR = File.expand_path('../db/migrations', __dir__)
+
+# Tracked in its own table, separate from the Go event store's migration
+# tracker (also called schema_migrations, see go/cmd/migrate) so the two
+# migrators never collide.
+MIGRATOR_OPTS = { table: :ruby_schema_migrations }.freeze
+
+case ARGV[0] || 'up'
+when 'up'
+  Sequel::Migrator.run(DB, MIGRATIONS_DIR, **MIGRATOR_OPTS)
+  puts 'migrated up'
+when 'down'
+  Sequel::Migrator.run(DB, MIGRATIONS_DIR, target: 0, **MIGRATOR_OPTS)
+  puts 'migrated down'
+else
+  abort "usage: #{$PROGRAM_NAME} [up|down]"
+end

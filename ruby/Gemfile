@@ -4,15 +4,19 @@ source 'http://rubygems.org'
 ruby '3.4.10'
 
 gem 'google-protobuf'
+gem 'pg'
+gem 'sequel'
 gem 'sorbet-runtime'
 gem 'twirp'
 
 group :development do
   gem 'rubocop', require: false
+  gem 'rubocop-rspec', require: false
   gem 'solargraph'
   gem 'sorbet'
 end
 
 group :development, :test do
+  gem 'rspec'
   gem 'tapioca', require: false
 end

@@ -1,0 +1,19 @@
+require:
+  - rubocop-rspec
+
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 3.4
+  Exclude:
+    - "bin/tapioca"
+    - "gen/proto/**/*"
+
+Metrics/BlockLength:
+  Exclude:
+    - "spec/**/*.rb"
+
+RSpec/ExampleLength:
+  Max: 20
+
+RSpec/MultipleExpectations:
+  Max: 5
