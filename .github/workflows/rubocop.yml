@@ -16,6 +16,9 @@ on:
 jobs:
   rubocop:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     strategy:
       fail-fast: false
 
@@ -30,23 +33,21 @@ jobs:
         with:
           ruby-version: 3.4.10
           bundler-cache: true
-
-      # This step is not necessary if you add the gem to your Gemfile
-      - name: Install Code Scanning integration
-        run: bundle add code-scanning-rubocop --skip-install
-
-      - name: Install dependencies
-        run: bundle install
+          working-directory: ruby
 
       - name: Rubocop run
+        working-directory: ruby
         run: |
-          bash -c "
-            cd ruby/
-            bundle exec rubocop --require code_scanning --format CodeScanning::SarifFormatter -o rubocop.sarif
-            [[ $? -ne 2 ]]
-          "
+          set +e
+          bundle exec rubocop --require code_scanning --format CodeScanning::SarifFormatter -o rubocop.sarif
+          rubocop_exit=$?
+          set -e
+          # Exit 1 means rubocop ran fine and just found offenses, which is
+          # reported via the SARIF upload below, not a failed job. Only a
+          # crash (anything else) should fail the step outright.
+          [[ $rubocop_exit -eq 0 || $rubocop_exit -eq 1 ]]
 
       - name: Upload Sarif output
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: rubocop.sarif
+          sarif_file: ruby/rubocop.sarif

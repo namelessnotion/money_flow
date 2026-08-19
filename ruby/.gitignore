@@ -1,0 +1,3 @@
+# ruby/setup-ruby's bundler-cache vendors gems here in CI so they can be
+# cached; never meant to be committed.
+/vendor/

@@ -10,6 +10,7 @@ gem 'sorbet-runtime'
 gem 'twirp'
 
 group :development do
+  gem 'code-scanning-rubocop', require: false
   gem 'rubocop', require: false
   gem 'rubocop-rspec', require: false
   gem 'solargraph'

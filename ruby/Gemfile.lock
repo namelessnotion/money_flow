@@ -5,6 +5,8 @@ GEM
     backport (1.2.0)
     benchmark (0.5.0)
     bigdecimal (4.1.2)
+    code-scanning-rubocop (0.6.1)
+      rubocop (~> 1.0)
     commander (5.0.0)
       highline (~> 3.0.0)
     date (3.5.1)
@@ -245,6 +247,7 @@ PLATFORMS
   x86_64-linux-musl
 
 DEPENDENCIES
+  code-scanning-rubocop
   google-protobuf
   pg
   rspec
