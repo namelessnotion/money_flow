@@ -10,4 +10,8 @@ dsl:
   #
   # exclude:
   # - SomeGeneratorName
-  # workers: 5
+  #
+  # Pinned to 1: the Sequel compiler loads the app, which opens a pg connection via
+  # Sequel.connect. Tapioca's parallel executor forks, and forking with a live libpq
+  # socket is a footgun. Costs nothing at this model count.
+  workers: 1

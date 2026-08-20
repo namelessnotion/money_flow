@@ -1,0 +1,30 @@
+name: "Sorbet"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4.10
+          bundler-cache: true
+          working-directory: ruby
+
+      # No database needed: the DSL RBIs under sorbet/rbi/dsl/ are committed, so
+      # this only reads them. Regenerating them (bundle exec tapioca dsl) does
+      # need a live migrated Postgres, since defining a Sequel::Model subclass
+      # queries the schema — see sorbet/tapioca/compilers/sequel_model.rb.
+      - name: Typecheck
+        working-directory: ruby
+        run: bundle exec srb tc

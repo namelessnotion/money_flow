@@ -3,3 +3,6 @@
 --ignore=tmp/
 --ignore=vendor/
 --parser=prism
+# rdoc's generated RBI reparents RDoc::Markup::Heading to Struct, conflicting with
+# Sorbet's bundled payload definition. Unrelated to this project's own code.
+--suppress-payload-superclass-redefinition-for=RDoc::Markup::Heading

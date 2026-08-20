@@ -1,11 +1,6 @@
 # frozen_string_literal: true
 
-require_relative '../lib/boot'
-
-APP_ROOT = File.expand_path('..', __dir__)
-%w[types models services].each do |layer|
-  Dir[File.join(APP_ROOT, 'app', layer, '**', '*.rb')].each { |f| require f }
-end
+require_relative '../lib/environment'
 
 RSpec.configure do |config|
   config.expect_with :rspec do |expectations|

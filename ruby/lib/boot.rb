@@ -2,6 +2,7 @@
 # typed: false
 
 require 'sequel'
+require 'graphql'
 require_relative 'core_ext/sorbet_sig'
 
 DB = Sequel.connect(
