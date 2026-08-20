@@ -10,5 +10,18 @@ services:
     volumes:
       - money_flow_postgres:/var/lib/postgresql/data
 
+  tigerbeetle:
+    build:
+      context: ./docker/tigerbeetle
+    security_opt:
+      - "seccomp=unconfined"
+    cap_add:
+      - IPC_LOCK
+    ports:
+      - "3000:3000"
+    volumes:
+      - money_flow_tigerbeetle:/data
+
 volumes:
   money_flow_postgres:
+  money_flow_tigerbeetle:

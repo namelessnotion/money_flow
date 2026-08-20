@@ -38,6 +38,20 @@ RSpec.describe Services::OnboardEntity do
           expect(establish_request.id).not_to be_empty
         end
       end
+
+      it 'establishes the holder before inserting the entity' do
+        rows_at_establish_time = nil
+        allow(holder_client).to receive(:establish) do
+          rows_at_establish_time = Models::Entity.where(name: 'Test Entity').count
+          Twirp::ClientResp.new(data: Holder::V1::EstablishResponse.new)
+        end
+
+        service.call(request: request)
+
+        # entities.holder_uuid is NOT NULL, so the row can only be written once
+        # the holder exists — there is no create-then-backfill window.
+        expect(rows_at_establish_time).to eq(0)
+      end
     end
 
     context 'when establishing the holder fails' do
@@ -47,7 +61,7 @@ RSpec.describe Services::OnboardEntity do
         )
       end
 
-      it 'raises and rolls back the entity creation' do
+      it 'raises without ever creating the entity' do
         expect { service.call(request: request) }.to raise_error(described_class::HolderEstablishmentFailed, 'boom')
 
         expect(Models::Entity.where(name: 'Test Entity')).to be_empty

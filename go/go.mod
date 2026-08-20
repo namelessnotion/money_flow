@@ -1,6 +1,6 @@
 module github.com/namelessnotion/money_flow/go
 
-go 1.26.6
+go 1.27.0
 
 tool (
 	github.com/arthurnn/twirp-ruby/protoc-gen-twirp_ruby
@@ -10,6 +10,7 @@ tool (
 
 require (
 	github.com/jackc/pgx/v5 v5.10.0
+	github.com/twitchtv/twirp v8.1.3+incompatible
 	google.golang.org/protobuf v1.36.12
 )
 
@@ -21,7 +22,6 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/twitchtv/twirp v8.1.3+incompatible // indirect
 	golang.org/x/sync v0.18.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 )

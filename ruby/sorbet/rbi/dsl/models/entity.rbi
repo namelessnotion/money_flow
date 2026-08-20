@@ -19,7 +19,7 @@ class Models::Entity
     sig { params(value: T.nilable(Time)).returns(T.nilable(Time)) }
     def created_at=(value); end
 
-    sig { returns(T.nilable(String)) }
+    sig { returns(String) }
     def holder_uuid; end
 
     sig { params(value: T.nilable(String)).returns(T.nilable(String)) }
