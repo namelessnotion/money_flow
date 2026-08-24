@@ -23,7 +23,20 @@ func NewMemoryStore() *MemoryStore {
 }
 
 func (s *MemoryStore) Append(ctx context.Context, aggregateType, aggregateID string, expectedSeq int64, events ...proto.Message) error {
-	if len(events) == 0 {
+	return s.AppendAtomic(ctx, StreamWrite{
+		AggregateType: aggregateType,
+		AggregateID:   aggregateID,
+		ExpectedSeq:   expectedSeq,
+		Events:        events,
+	})
+}
+
+func (s *MemoryStore) AppendAtomic(ctx context.Context, writes ...StreamWrite) error {
+	writes = liveWrites(writes)
+	if err := validateWrites(writes); err != nil {
+		return err
+	}
+	if len(writes) == 0 {
 		return nil
 	}
 	if err := ctx.Err(); err != nil {
@@ -33,37 +46,48 @@ func (s *MemoryStore) Append(ctx context.Context, aggregateType, aggregateID str
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	key := streamKey(aggregateType, aggregateID)
-	stream := s.streams[key]
-	// Strict control to prevent the expectedSeq from skipping ahead of the last sequence, thus preventing a gap in the sequence.
-	// This is a stronger guarantee than PostgresStore, which only enforces that the expectedSeq is UNIQUE
-	if int64(len(stream)) != expectedSeq {
-		return ErrConcurrencyConflict
-	}
-
-	// Marshal everything before mutating, so a failure part-way through can't
-	// leave a partially-appended stream behind.
-	appended := make([]Event, 0, len(events))
-	for i, evt := range events {
-		payload, err := proto.Marshal(evt)
-		if err != nil {
-			return fmt.Errorf("eventstore: marshal %T: %w", evt, err)
+	// Validate and marshal every stream before mutating any of them, so a
+	// failure part-way through can't leave a partially-applied batch behind.
+	// This is the in-memory stand-in for PostgresStore's transaction.
+	//
+	// Indexed by write position rather than keyed by stream: global_seq is
+	// assigned in this order below, and ranging a map would make it
+	// nondeterministic and diverge from Postgres' insert order.
+	staged := make([][]Event, len(writes))
+	for n, w := range writes {
+		// Still stricter than PostgresStore: an ExpectedSeq that skips past the
+		// end of the stream is rejected here, where Postgres would accept it
+		// and leave a gap.
+		if int64(len(s.streams[streamKey(w.AggregateType, w.AggregateID)])) != w.ExpectedSeq {
+			return ErrConcurrencyConflict
 		}
-		appended = append(appended, Event{
-			AggregateType: aggregateType,
-			AggregateID:   aggregateID,
-			Sequence:      expectedSeq + int64(i) + 1,
-			EventType:     EventType(evt),
-			Payload:       payload,
-			OccurredAt:    time.Now().UTC(),
-		})
+
+		batch := make([]Event, 0, len(w.Events))
+		for i, evt := range w.Events {
+			payload, err := proto.Marshal(evt)
+			if err != nil {
+				return fmt.Errorf("eventstore: marshal %T: %w", evt, err)
+			}
+			batch = append(batch, Event{
+				AggregateType: w.AggregateType,
+				AggregateID:   w.AggregateID,
+				Sequence:      w.ExpectedSeq + int64(i) + 1,
+				EventType:     EventType(evt),
+				Payload:       payload,
+				OccurredAt:    time.Now().UTC(),
+			})
+		}
+		staged[n] = batch
 	}
 
-	for i := range appended {
-		s.globalSeq++
-		appended[i].GlobalSeq = s.globalSeq
+	for n, w := range writes {
+		key := streamKey(w.AggregateType, w.AggregateID)
+		for i := range staged[n] {
+			s.globalSeq++
+			staged[n][i].GlobalSeq = s.globalSeq
+		}
+		s.streams[key] = append(s.streams[key], staged[n]...)
 	}
-	s.streams[key] = append(stream, appended...)
 	return nil
 }
 

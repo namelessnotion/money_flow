@@ -1,18 +1,13 @@
 syntax = "proto3";
 package holder.v1;
 
+import "shared/v1/allows.proto";
+
 option go_package = "github.com/namelessnotion/money_flow/go/gen/proto/holder/v1";
 
 message Memo {
   string id = 1;
   string value = 2;
-}
-
-enum Allows {
-  ALLOWS_UNSPECIFIED = 0;
-  ALLOWS_TRANSFER_ONLY = 1;
-  ALLOWS_HALF_TRANSFER_ONLY = 2;
-  ALLOWS_HALF_TRANSFER_AND_TRANSFER = 3;
 }
 
 message EstablishRequest {
@@ -29,14 +24,14 @@ message AddWalletRequest {
   string id = 1;
   string wallet_id = 2;
   string name = 3;
-  Allows allows = 4;
+  shared.v1.Allows allows = 4;
 }
 
 message HolderAddedWallet {
   string id = 1;
   string wallet_id = 2;
   string name = 3;
-  Allows allows = 4;
+  shared.v1.Allows allows = 4;
 }
 
 message HolderRejectedWallet {
@@ -60,7 +55,44 @@ message AddWalletResponse {
   }
 }
 
+message WalletSpec {
+  string wallet_id = 1;
+  string name = 2;
+  shared.v1.Allows allows = 3;
+}
+
+// Establishes a Holder and opens its Wallets as one all-or-nothing unit, so a
+// Holder can never end up half-provisioned. Idempotent per id: re-provisioning
+// appends only what is missing and returns the Holder as it stands.
+// Provisioning is a transport convenience, not a new domain concept,
+// so nothing about it is written to the log and removing this rpc later would
+// invalidate no stored event.
+message ProvisionRequest {
+  string id = 1;
+  map<string, Memo> memos = 2;
+  repeated WalletSpec wallets = 3;
+}
+
+message HolderProvisioned {
+  string id = 1;
+  repeated string wallet_ids = 2;
+}
+
+message HolderProvisionRejected {
+  string id = 1;
+  string reason = 2;
+}
+
+message ProvisionResponse {
+  string id = 1;
+  oneof result {
+    HolderProvisioned holder_provisioned = 2;
+    HolderProvisionRejected holder_provision_rejected = 3;
+  }
+}
+
 service HolderService {
   rpc Establish(EstablishRequest) returns (EstablishResponse) {}
   rpc AddWallet(AddWalletRequest) returns (AddWalletResponse) {}
+  rpc Provision(ProvisionRequest) returns (ProvisionResponse) {}
 }

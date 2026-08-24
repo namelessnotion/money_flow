@@ -274,6 +274,219 @@ func runStoreContract(t *testing.T, newStore func(*testing.T) eventstore.Store) 
 			}
 		}
 	})
+
+	t.Run("an atomic append writes across several streams", func(t *testing.T) {
+		store := newStore(t)
+		holderID, w1, w2 := uniqueID(t), uniqueID(t), uniqueID(t)
+
+		err := store.AppendAtomic(ctx,
+			eventstore.StreamWrite{
+				AggregateType: "holder", AggregateID: holderID, ExpectedSeq: 0,
+				Events: []proto.Message{
+					&pb.HolderEstablished{Id: holderID},
+					&pb.HolderAddedWallet{Id: holderID, WalletId: w1},
+				},
+			},
+			eventstore.StreamWrite{
+				AggregateType: "wallet", AggregateID: w1, ExpectedSeq: 0,
+				Events: []proto.Message{&pb.HolderEstablished{Id: w1}},
+			},
+			eventstore.StreamWrite{
+				AggregateType: "wallet", AggregateID: w2, ExpectedSeq: 0,
+				Events: []proto.Message{&pb.HolderEstablished{Id: w2}},
+			},
+		)
+		if err != nil {
+			t.Fatalf("AppendAtomic() error = %v", err)
+		}
+
+		for _, tc := range []struct {
+			aggType, id string
+			want        int
+		}{{"holder", holderID, 2}, {"wallet", w1, 1}, {"wallet", w2, 1}} {
+			events, err := store.Load(ctx, tc.aggType, tc.id)
+			if err != nil {
+				t.Fatalf("Load(%s/%s) error = %v", tc.aggType, tc.id, err)
+			}
+			if len(events) != tc.want {
+				t.Fatalf("Load(%s/%s) returned %d events, want %d", tc.aggType, tc.id, len(events), tc.want)
+			}
+			// Each stream sequences from 1 independently of the others.
+			for i, event := range events {
+				if event.Sequence != int64(i+1) {
+					t.Errorf("Load(%s/%s)[%d].Sequence = %d, want %d", tc.aggType, tc.id, i, event.Sequence, i+1)
+				}
+			}
+		}
+
+		// global_seq orders the whole batch in the order the writes were given.
+		holderEvents, _ := store.Load(ctx, "holder", holderID)
+		w1Events, _ := store.Load(ctx, "wallet", w1)
+		if holderEvents[1].GlobalSeq >= w1Events[0].GlobalSeq {
+			t.Errorf("global_seq not increasing across the batch: holder[1]=%d then wallet=%d",
+				holderEvents[1].GlobalSeq, w1Events[0].GlobalSeq)
+		}
+	})
+
+	// THE atomicity guarantee. One stream is pre-seeded so its write is certain
+	// to collide; every other stream in the batch must be left untouched.
+	t.Run("a conflict on any stream rolls back every stream", func(t *testing.T) {
+		store := newStore(t)
+		holderID, w1, w2 := uniqueID(t), uniqueID(t), uniqueID(t)
+
+		if err := store.Append(ctx, "wallet", w2, 0, &pb.HolderEstablished{Id: w2}); err != nil {
+			t.Fatalf("seeding the colliding stream: %v", err)
+		}
+
+		err := store.AppendAtomic(ctx,
+			eventstore.StreamWrite{
+				AggregateType: "holder", AggregateID: holderID, ExpectedSeq: 0,
+				Events: []proto.Message{&pb.HolderEstablished{Id: holderID}},
+			},
+			eventstore.StreamWrite{
+				AggregateType: "wallet", AggregateID: w1, ExpectedSeq: 0,
+				Events: []proto.Message{&pb.HolderEstablished{Id: w1}},
+			},
+			eventstore.StreamWrite{
+				// Stale: this stream already holds sequence 1.
+				AggregateType: "wallet", AggregateID: w2, ExpectedSeq: 0,
+				Events: []proto.Message{&pb.HolderEstablished{Id: w2}},
+			},
+		)
+		if !errors.Is(err, eventstore.ErrConcurrencyConflict) {
+			t.Fatalf("AppendAtomic() error = %v, want ErrConcurrencyConflict", err)
+		}
+
+		for _, tc := range []struct {
+			aggType, id string
+			want        int
+		}{{"holder", holderID, 0}, {"wallet", w1, 0}, {"wallet", w2, 1}} {
+			events, err := store.Load(ctx, tc.aggType, tc.id)
+			if err != nil {
+				t.Fatalf("Load(%s/%s) error = %v", tc.aggType, tc.id, err)
+			}
+			if len(events) != tc.want {
+				t.Errorf("Load(%s/%s) returned %d events, want %d — no part of a conflicting batch may persist",
+					tc.aggType, tc.id, len(events), tc.want)
+			}
+		}
+	})
+
+	t.Run("naming one stream twice in an atomic append is rejected", func(t *testing.T) {
+		store := newStore(t)
+		id := uniqueID(t)
+
+		write := eventstore.StreamWrite{
+			AggregateType: "holder", AggregateID: id, ExpectedSeq: 0,
+			Events: []proto.Message{&pb.HolderEstablished{Id: id}},
+		}
+		err := store.AppendAtomic(ctx, write, write)
+		if !errors.Is(err, eventstore.ErrDuplicateStream) {
+			t.Fatalf("AppendAtomic() error = %v, want ErrDuplicateStream", err)
+		}
+
+		events, err := store.Load(ctx, "holder", id)
+		if err != nil {
+			t.Fatalf("Load() error = %v", err)
+		}
+		if len(events) != 0 {
+			t.Errorf("Load() returned %d events, want 0", len(events))
+		}
+	})
+
+	t.Run("an atomic append with no writes is a no-op", func(t *testing.T) {
+		store := newStore(t)
+		if err := store.AppendAtomic(ctx); err != nil {
+			t.Fatalf("AppendAtomic() with no writes error = %v", err)
+		}
+	})
+
+	// A write carrying no events inserts nothing, so its ExpectedSeq is
+	// unverifiable and must be ignored rather than rejected — otherwise
+	// MemoryStore would conflict where PostgresStore silently succeeds.
+	t.Run("writes with no events are skipped, not validated", func(t *testing.T) {
+		store := newStore(t)
+		holderID, empty := uniqueID(t), uniqueID(t)
+
+		err := store.AppendAtomic(ctx,
+			eventstore.StreamWrite{
+				AggregateType: "holder", AggregateID: holderID, ExpectedSeq: 0,
+				Events: []proto.Message{&pb.HolderEstablished{Id: holderID}},
+			},
+			eventstore.StreamWrite{
+				// Nonsense ExpectedSeq, but no events, so it must be ignored.
+				AggregateType: "wallet", AggregateID: empty, ExpectedSeq: 99,
+			},
+		)
+		if err != nil {
+			t.Fatalf("AppendAtomic() error = %v", err)
+		}
+
+		events, err := store.Load(ctx, "holder", holderID)
+		if err != nil {
+			t.Fatalf("Load() error = %v", err)
+		}
+		if len(events) != 1 {
+			t.Errorf("Load(holder) returned %d events, want 1 — the other write must still land", len(events))
+		}
+	})
+
+	t.Run("a stream write without an aggregate identity is rejected", func(t *testing.T) {
+		store := newStore(t)
+
+		for _, tc := range []struct {
+			name                     string
+			aggregateType, aggregate string
+		}{
+			{"no type", "", uniqueID(t)},
+			{"no id", "holder", ""},
+		} {
+			err := store.AppendAtomic(ctx, eventstore.StreamWrite{
+				AggregateType: tc.aggregateType, AggregateID: tc.aggregate, ExpectedSeq: 0,
+				Events: []proto.Message{&pb.HolderEstablished{Id: "x"}},
+			})
+			if err == nil {
+				t.Errorf("AppendAtomic() with %s: error = nil, want a rejection", tc.name)
+			}
+		}
+	})
+
+	// Append is a thin delegation to AppendAtomic; this pins that it stays one.
+	t.Run("append and atomic append agree for a single stream", func(t *testing.T) {
+		store := newStore(t)
+		viaAppend, viaAtomic := uniqueID(t), uniqueID(t)
+
+		if err := store.Append(ctx, "holder", viaAppend, 0, &pb.HolderEstablished{Id: viaAppend}); err != nil {
+			t.Fatalf("Append() error = %v", err)
+		}
+		if err := store.AppendAtomic(ctx, eventstore.StreamWrite{
+			AggregateType: "holder", AggregateID: viaAtomic, ExpectedSeq: 0,
+			Events: []proto.Message{&pb.HolderEstablished{Id: viaAtomic}},
+		}); err != nil {
+			t.Fatalf("AppendAtomic() error = %v", err)
+		}
+
+		a, _ := store.Load(ctx, "holder", viaAppend)
+		b, _ := store.Load(ctx, "holder", viaAtomic)
+		if len(a) != 1 || len(b) != 1 {
+			t.Fatalf("Load() returned %d and %d events, want 1 each", len(a), len(b))
+		}
+		if a[0].Sequence != b[0].Sequence || a[0].EventType != b[0].EventType {
+			t.Errorf("Append produced (seq=%d, %s) but AppendAtomic produced (seq=%d, %s)",
+				a[0].Sequence, a[0].EventType, b[0].Sequence, b[0].EventType)
+		}
+
+		// Both paths must reject a stale expectedSeq identically.
+		if err := store.Append(ctx, "holder", viaAppend, 0, &pb.HolderEstablished{Id: viaAppend}); !errors.Is(err, eventstore.ErrConcurrencyConflict) {
+			t.Errorf("Append() stale error = %v, want ErrConcurrencyConflict", err)
+		}
+		if err := store.AppendAtomic(ctx, eventstore.StreamWrite{
+			AggregateType: "holder", AggregateID: viaAtomic, ExpectedSeq: 0,
+			Events: []proto.Message{&pb.HolderEstablished{Id: viaAtomic}},
+		}); !errors.Is(err, eventstore.ErrConcurrencyConflict) {
+			t.Errorf("AppendAtomic() stale error = %v, want ErrConcurrencyConflict", err)
+		}
+	})
 }
 
 // uniqueID keeps every test case in its own stream. The events table is

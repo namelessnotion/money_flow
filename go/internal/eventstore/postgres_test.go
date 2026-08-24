@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/protobuf/proto"
 
 	pb "github.com/namelessnotion/money_flow/go/gen/proto/holder/v1"
 	"github.com/namelessnotion/money_flow/go/internal/eventstore"
@@ -128,6 +129,82 @@ func TestPostgresStoreConcurrentAppendHasOneWinner(t *testing.T) {
 	}
 	if len(events) != 1 {
 		t.Fatalf("Load() returned %d events, want exactly 1", len(events))
+	}
+}
+
+// The multi-stream equivalent of the single-stream race above: several writers
+// racing the identical provisioning batch must produce exactly one winner, with
+// every stream in the batch holding only that winner's events.
+func TestPostgresStoreConcurrentAtomicAppendHasOneWinner(t *testing.T) {
+	pool := testPool(t)
+	ctx := context.Background()
+
+	store := eventstore.NewPostgresStore(pool)
+	holderID := uniqueID(t)
+	walletIDs := []string{uniqueID(t), uniqueID(t), uniqueID(t)}
+
+	batch := func() []eventstore.StreamWrite {
+		writes := []eventstore.StreamWrite{{
+			AggregateType: "holder", AggregateID: holderID, ExpectedSeq: 0,
+			Events: []proto.Message{&pb.HolderEstablished{Id: holderID}},
+		}}
+		for _, w := range walletIDs {
+			writes = append(writes, eventstore.StreamWrite{
+				AggregateType: "wallet", AggregateID: w, ExpectedSeq: 0,
+				Events: []proto.Message{&pb.HolderAddedWallet{Id: holderID, WalletId: w}},
+			})
+		}
+		return writes
+	}
+
+	const writers = 8
+	var (
+		wg        sync.WaitGroup
+		mu        sync.Mutex
+		succeeded int
+		conflicts int
+	)
+
+	wg.Add(writers)
+	for range writers {
+		go func() {
+			defer wg.Done()
+			err := store.AppendAtomic(ctx, batch()...)
+
+			mu.Lock()
+			defer mu.Unlock()
+			switch {
+			case err == nil:
+				succeeded++
+			case errors.Is(err, eventstore.ErrConcurrencyConflict):
+				conflicts++
+			default:
+				t.Errorf("AppendAtomic() unexpected error = %v", err)
+			}
+		}()
+	}
+	wg.Wait()
+
+	if succeeded != 1 {
+		t.Errorf("%d writers succeeded, want exactly 1", succeeded)
+	}
+	if conflicts != writers-1 {
+		t.Errorf("%d writers conflicted, want %d", conflicts, writers-1)
+	}
+
+	// Every stream in the batch holds exactly one event — the losers left nothing.
+	for _, tc := range append([]string{holderID}, walletIDs...) {
+		aggType := "wallet"
+		if tc == holderID {
+			aggType = "holder"
+		}
+		events, err := store.Load(ctx, aggType, tc)
+		if err != nil {
+			t.Fatalf("Load(%s/%s) error = %v", aggType, tc, err)
+		}
+		if len(events) != 1 {
+			t.Errorf("Load(%s/%s) returned %d events, want exactly 1", aggType, tc, len(events))
+		}
 	}
 }
 

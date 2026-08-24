@@ -1,12 +1,8 @@
 # typed: strict
 # frozen_string_literal: true
 
-# `tapioca dsl` has no way to boot a non-Rails app: `Tapioca::Loaders::Dsl#load` only
-# calls `load_rails_application`, which returns immediately when there's no
-# `config/application.rb`, and `dsl` has no `--require` flag. Compiler files are
-# required after that no-op, so loading the app here is the hook we get.
-require_relative '../../../lib/environment'
-
+# The app is loaded by sorbet/tapioca/extensions/load_app.rb, which runs before
+# compilers are required — see that file for why it can't live here.
 return unless defined?(Sequel::Model)
 
 module Tapioca

@@ -4,5 +4,6 @@
 module Models
   # persisted database model for an entity
   class Entity < Sequel::Model
+    one_to_many :accounts
   end
 end

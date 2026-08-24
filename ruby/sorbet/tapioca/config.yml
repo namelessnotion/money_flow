@@ -6,10 +6,15 @@ gem:
   # doc: true
   # workers: 5
 dsl:
-  # Add your `dsl` command parameters here:
-  #
-  # exclude:
-  # - SomeGeneratorName
+  # Protobuf's generated *_pb.rb build their classes by constant assignment from
+  # the descriptor pool. Tapioca's Protobuf compiler emits real `class ... <
+  # AbstractMessage` RBIs for them, which Sorbet then reports as conflicting
+  # with those assignments (error 4022). Silencing that would mean hiding the
+  # whole gen/proto tree from Sorbet, which would also hide the hand-written
+  # *_twirp.rb client classes that are referenced from sigs. Not worth it:
+  # enum values are passed as symbols instead (see Types::Enums::AccountType).
+  exclude:
+    - Protobuf
   #
   # Pinned to 1: the Sequel compiler loads the app, which opens a pg connection via
   # Sequel.connect. Tapioca's parallel executor forks, and forking with a live libpq

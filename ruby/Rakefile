@@ -1,0 +1,26 @@
+# frozen_string_literal: true
+
+namespace :db do
+  desc 'Create a new migration file, e.g. rake db:new_migration[create_wallets]'
+  task :new_migration, [:name] do |_t, args|
+    name = args[:name]
+    abort 'usage: rake db:new_migration[migration_name]' if name.nil? || name.empty?
+
+    migrations_dir = File.expand_path('db/migrations', __dir__)
+    timestamp = Time.now.utc.strftime('%Y%m%d%H%M%S')
+    filename = "#{timestamp}_#{name}.rb"
+    path = File.join(migrations_dir, filename)
+
+    File.write(path, <<~RUBY)
+      # frozen_string_literal: true
+      # typed: ignore
+
+      Sequel.migration do
+        change do
+        end
+      end
+    RUBY
+
+    puts "created #{File.join('db/migrations', filename)}"
+  end
+end

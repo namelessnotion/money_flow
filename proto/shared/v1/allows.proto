@@ -1,0 +1,18 @@
+syntax = "proto3";
+package shared.v1;
+
+option go_package = "github.com/namelessnotion/money_flow/go/gen/proto/shared/v1";
+
+// Allows is what a Wallet may do at the boundary of the platform: onramp brings
+// money in from outside, offramp sends it out. Transfers *between* Wallets are
+// governed elsewhere and are not restricted by this.
+//
+// Shared by holder.v1 and wallet.v1 so a Wallet's policy has exactly one
+// vocabulary.
+enum Allows {
+  ALLOWS_UNSPECIFIED = 0;
+  ALLOWS_ONRAMP = 1;
+  ALLOWS_OFFRAMP = 2;
+  ALLOWS_ONRAMP_AND_OFFRAMP = 3;
+  ALLOWS_NONE = 4;
+}

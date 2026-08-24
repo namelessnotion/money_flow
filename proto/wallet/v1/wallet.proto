@@ -1,26 +1,22 @@
 syntax = "proto3";
 package wallet.v1;
+
 option go_package = "github.com/namelessnotion/money_flow/go/gen/proto/wallet/v1";
 
-enum Allows {
-  ALLOWS_UNSPECIFIED = 0;
-  ALLOWS_TRANSFER_ONLY = 1;
-  ALLOWS_HALF_TRANSFER_ONLY = 2;
-  ALLOWS_HALF_TRANSFER_AND_TRANSFER = 3;
-}
+import "shared/v1/allows.proto";
 
 message OpenRequest {
   string id = 1;
   string holder_id = 2;
   string name = 3;
-  Allows allows = 4;
+  shared.v1.Allows allows = 4;
 }
 
 message WalletOpened {
   string id = 1;
   string holder_id = 2;
   string name = 3;
-  Allows allows = 4;
+  shared.v1.Allows allows = 4;
 }
 
 message WalletRejected {

@@ -1,0 +1,88 @@
+name: Tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    name: Go tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: money_flow
+          POSTGRES_PASSWORD: money_flow
+          POSTGRES_DB: money_flow_dev
+        options: >-
+          --health-cmd "pg_isready -U money_flow -d money_flow_dev"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      DATABASE_URL: postgres://money_flow:money_flow@localhost:5432/money_flow_dev?sslmode=disable
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+
+      - name: Apply event-store migrations
+        working-directory: go
+        run: go run ./cmd/migrate up
+
+      - name: Run Go tests
+        working-directory: go
+        run: go test ./...
+
+  ruby:
+    name: Ruby specs
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: money_flow
+          POSTGRES_PASSWORD: money_flow
+          POSTGRES_DB: money_flow_dev
+        options: >-
+          --health-cmd "pg_isready -U money_flow -d money_flow_dev"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      DATABASE_URL: postgres://money_flow:money_flow@localhost:5432/money_flow_dev?sslmode=disable
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4.10
+          bundler-cache: true
+          working-directory: ruby
+
+      - name: Apply Ruby migrations
+        working-directory: ruby
+        run: bundle exec bin/migrate up
+
+      - name: Run Ruby specs
+        working-directory: ruby
+        run: bundle exec rspec

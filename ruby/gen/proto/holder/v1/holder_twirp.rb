@@ -9,6 +9,7 @@ module Holder
       service 'HolderService'
       rpc :Establish, EstablishRequest, EstablishResponse, :ruby_method => :establish
       rpc :AddWallet, AddWalletRequest, AddWalletResponse, :ruby_method => :add_wallet
+      rpc :Provision, ProvisionRequest, ProvisionResponse, :ruby_method => :provision
     end
 
     class HolderServiceClient < ::Twirp::Client

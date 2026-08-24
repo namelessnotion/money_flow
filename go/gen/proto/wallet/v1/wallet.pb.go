@@ -7,6 +7,7 @@
 package v1
 
 import (
+	v1 "github.com/namelessnotion/money_flow/go/gen/proto/shared/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -21,64 +22,12 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type Allows int32
-
-const (
-	Allows_ALLOWS_UNSPECIFIED                Allows = 0
-	Allows_ALLOWS_TRANSFER_ONLY              Allows = 1
-	Allows_ALLOWS_HALF_TRANSFER_ONLY         Allows = 2
-	Allows_ALLOWS_HALF_TRANSFER_AND_TRANSFER Allows = 3
-)
-
-// Enum value maps for Allows.
-var (
-	Allows_name = map[int32]string{
-		0: "ALLOWS_UNSPECIFIED",
-		1: "ALLOWS_TRANSFER_ONLY",
-		2: "ALLOWS_HALF_TRANSFER_ONLY",
-		3: "ALLOWS_HALF_TRANSFER_AND_TRANSFER",
-	}
-	Allows_value = map[string]int32{
-		"ALLOWS_UNSPECIFIED":                0,
-		"ALLOWS_TRANSFER_ONLY":              1,
-		"ALLOWS_HALF_TRANSFER_ONLY":         2,
-		"ALLOWS_HALF_TRANSFER_AND_TRANSFER": 3,
-	}
-)
-
-func (x Allows) Enum() *Allows {
-	p := new(Allows)
-	*p = x
-	return p
-}
-
-func (x Allows) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (Allows) Descriptor() protoreflect.EnumDescriptor {
-	return file_wallet_v1_wallet_proto_enumTypes[0].Descriptor()
-}
-
-func (Allows) Type() protoreflect.EnumType {
-	return &file_wallet_v1_wallet_proto_enumTypes[0]
-}
-
-func (x Allows) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use Allows.Descriptor instead.
-func (Allows) EnumDescriptor() ([]byte, []int) {
-	return file_wallet_v1_wallet_proto_rawDescGZIP(), []int{0}
-}
-
 type OpenRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	HolderId      string                 `protobuf:"bytes,2,opt,name=holder_id,json=holderId,proto3" json:"holder_id,omitempty"`
 	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Allows        Allows                 `protobuf:"varint,4,opt,name=allows,proto3,enum=wallet.v1.Allows" json:"allows,omitempty"`
+	Allows        v1.Allows              `protobuf:"varint,4,opt,name=allows,proto3,enum=shared.v1.Allows" json:"allows,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -134,11 +83,11 @@ func (x *OpenRequest) GetName() string {
 	return ""
 }
 
-func (x *OpenRequest) GetAllows() Allows {
+func (x *OpenRequest) GetAllows() v1.Allows {
 	if x != nil {
 		return x.Allows
 	}
-	return Allows_ALLOWS_UNSPECIFIED
+	return v1.Allows(0)
 }
 
 type WalletOpened struct {
@@ -146,7 +95,7 @@ type WalletOpened struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	HolderId      string                 `protobuf:"bytes,2,opt,name=holder_id,json=holderId,proto3" json:"holder_id,omitempty"`
 	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Allows        Allows                 `protobuf:"varint,4,opt,name=allows,proto3,enum=wallet.v1.Allows" json:"allows,omitempty"`
+	Allows        v1.Allows              `protobuf:"varint,4,opt,name=allows,proto3,enum=shared.v1.Allows" json:"allows,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -202,11 +151,11 @@ func (x *WalletOpened) GetName() string {
 	return ""
 }
 
-func (x *WalletOpened) GetAllows() Allows {
+func (x *WalletOpened) GetAllows() v1.Allows {
 	if x != nil {
 		return x.Allows
 	}
-	return Allows_ALLOWS_UNSPECIFIED
+	return v1.Allows(0)
 }
 
 type WalletRejected struct {
@@ -363,17 +312,17 @@ var File_wallet_v1_wallet_proto protoreflect.FileDescriptor
 
 const file_wallet_v1_wallet_proto_rawDesc = "" +
 	"\n" +
-	"\x16wallet/v1/wallet.proto\x12\twallet.v1\"y\n" +
+	"\x16wallet/v1/wallet.proto\x12\twallet.v1\x1a\x16shared/v1/allows.proto\"y\n" +
 	"\vOpenRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tholder_id\x18\x02 \x01(\tR\bholderId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12)\n" +
-	"\x06allows\x18\x04 \x01(\x0e2\x11.wallet.v1.AllowsR\x06allows\"z\n" +
+	"\x06allows\x18\x04 \x01(\x0e2\x11.shared.v1.AllowsR\x06allows\"z\n" +
 	"\fWalletOpened\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tholder_id\x18\x02 \x01(\tR\bholderId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12)\n" +
-	"\x06allows\x18\x04 \x01(\x0e2\x11.wallet.v1.AllowsR\x06allows\"U\n" +
+	"\x06allows\x18\x04 \x01(\x0e2\x11.shared.v1.AllowsR\x06allows\"U\n" +
 	"\x0eWalletRejected\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tholder_id\x18\x02 \x01(\tR\bholderId\x12\x16\n" +
@@ -382,12 +331,7 @@ const file_wallet_v1_wallet_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12>\n" +
 	"\rwallet_opened\x18\x02 \x01(\v2\x17.wallet.v1.WalletOpenedH\x00R\fwalletOpened\x12D\n" +
 	"\x0fwallet_rejected\x18\x03 \x01(\v2\x19.wallet.v1.WalletRejectedH\x00R\x0ewalletRejectedB\b\n" +
-	"\x06result*\x80\x01\n" +
-	"\x06Allows\x12\x16\n" +
-	"\x12ALLOWS_UNSPECIFIED\x10\x00\x12\x18\n" +
-	"\x14ALLOWS_TRANSFER_ONLY\x10\x01\x12\x1d\n" +
-	"\x19ALLOWS_HALF_TRANSFER_ONLY\x10\x02\x12%\n" +
-	"!ALLOWS_HALF_TRANSFER_AND_TRANSFER\x10\x032J\n" +
+	"\x06result2J\n" +
 	"\rWalletService\x129\n" +
 	"\x04Open\x12\x16.wallet.v1.OpenRequest\x1a\x17.wallet.v1.OpenResponse\"\x00B=Z;github.com/namelessnotion/money_flow/go/gen/proto/wallet/v1b\x06proto3"
 
@@ -403,22 +347,21 @@ func file_wallet_v1_wallet_proto_rawDescGZIP() []byte {
 	return file_wallet_v1_wallet_proto_rawDescData
 }
 
-var file_wallet_v1_wallet_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_wallet_v1_wallet_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_wallet_v1_wallet_proto_goTypes = []any{
-	(Allows)(0),            // 0: wallet.v1.Allows
-	(*OpenRequest)(nil),    // 1: wallet.v1.OpenRequest
-	(*WalletOpened)(nil),   // 2: wallet.v1.WalletOpened
-	(*WalletRejected)(nil), // 3: wallet.v1.WalletRejected
-	(*OpenResponse)(nil),   // 4: wallet.v1.OpenResponse
+	(*OpenRequest)(nil),    // 0: wallet.v1.OpenRequest
+	(*WalletOpened)(nil),   // 1: wallet.v1.WalletOpened
+	(*WalletRejected)(nil), // 2: wallet.v1.WalletRejected
+	(*OpenResponse)(nil),   // 3: wallet.v1.OpenResponse
+	(v1.Allows)(0),         // 4: shared.v1.Allows
 }
 var file_wallet_v1_wallet_proto_depIdxs = []int32{
-	0, // 0: wallet.v1.OpenRequest.allows:type_name -> wallet.v1.Allows
-	0, // 1: wallet.v1.WalletOpened.allows:type_name -> wallet.v1.Allows
-	2, // 2: wallet.v1.OpenResponse.wallet_opened:type_name -> wallet.v1.WalletOpened
-	3, // 3: wallet.v1.OpenResponse.wallet_rejected:type_name -> wallet.v1.WalletRejected
-	1, // 4: wallet.v1.WalletService.Open:input_type -> wallet.v1.OpenRequest
-	4, // 5: wallet.v1.WalletService.Open:output_type -> wallet.v1.OpenResponse
+	4, // 0: wallet.v1.OpenRequest.allows:type_name -> shared.v1.Allows
+	4, // 1: wallet.v1.WalletOpened.allows:type_name -> shared.v1.Allows
+	1, // 2: wallet.v1.OpenResponse.wallet_opened:type_name -> wallet.v1.WalletOpened
+	2, // 3: wallet.v1.OpenResponse.wallet_rejected:type_name -> wallet.v1.WalletRejected
+	0, // 4: wallet.v1.WalletService.Open:input_type -> wallet.v1.OpenRequest
+	3, // 5: wallet.v1.WalletService.Open:output_type -> wallet.v1.OpenResponse
 	5, // [5:6] is the sub-list for method output_type
 	4, // [4:5] is the sub-list for method input_type
 	4, // [4:4] is the sub-list for extension type_name
@@ -440,14 +383,13 @@ func file_wallet_v1_wallet_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_wallet_v1_wallet_proto_rawDesc), len(file_wallet_v1_wallet_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      0,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_wallet_v1_wallet_proto_goTypes,
 		DependencyIndexes: file_wallet_v1_wallet_proto_depIdxs,
-		EnumInfos:         file_wallet_v1_wallet_proto_enumTypes,
 		MessageInfos:      file_wallet_v1_wallet_proto_msgTypes,
 	}.Build()
 	File_wallet_v1_wallet_proto = out.File

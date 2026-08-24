@@ -16,9 +16,14 @@ const uniqueViolation = "23505"
 // PostgresStore is a Store backed by the events table (see
 // go/db/migrations/00001_create_events.up.sql). Optimistic concurrency is
 // enforced entirely by that table's UNIQUE(aggregate_type, aggregate_id,
-// sequence) constraint: Append computes each event's sequence number from
-// expectedSeq up front, so a stale expectedSeq collides with rows another
+// sequence) constraint: appends compute each event's sequence number from
+// ExpectedSeq up front, so a stale ExpectedSeq collides with rows another
 // writer already inserted instead of racing a separate check.
+//
+// That constraint is also what makes AppendAtomic safe across several streams:
+// every stream in the batch is re-validated at INSERT time inside the same
+// transaction, so a writer landing between a caller's read and this write turns
+// into ErrConcurrencyConflict rather than a lost or interleaved write.
 type PostgresStore struct {
 	pool *pgxpool.Pool
 }
@@ -28,21 +33,40 @@ func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
 }
 
 func (s *PostgresStore) Append(ctx context.Context, aggregateType, aggregateID string, expectedSeq int64, events ...proto.Message) error {
-	if len(events) == 0 {
+	return s.AppendAtomic(ctx, StreamWrite{
+		AggregateType: aggregateType,
+		AggregateID:   aggregateID,
+		ExpectedSeq:   expectedSeq,
+		Events:        events,
+	})
+}
+
+func (s *PostgresStore) AppendAtomic(ctx context.Context, writes ...StreamWrite) error {
+	writes = liveWrites(writes)
+	if err := validateWrites(writes); err != nil {
+		return err
+	}
+	if len(writes) == 0 {
 		return nil
 	}
 
+	// Everything is marshalled before the transaction opens, so a bad payload
+	// never leaves one dangling.
 	batch := &pgx.Batch{}
-	for i, evt := range events {
-		payload, err := proto.Marshal(evt)
-		if err != nil {
-			return fmt.Errorf("eventstore: marshal %T: %w", evt, err)
+	rows := 0
+	for _, w := range writes {
+		for i, evt := range w.Events {
+			payload, err := proto.Marshal(evt)
+			if err != nil {
+				return fmt.Errorf("eventstore: marshal %T: %w", evt, err)
+			}
+			batch.Queue(
+				`INSERT INTO events (aggregate_type, aggregate_id, sequence, event_type, payload)
+				 VALUES ($1, $2, $3, $4, $5)`,
+				w.AggregateType, w.AggregateID, w.ExpectedSeq+int64(i)+1, EventType(evt), payload,
+			)
+			rows++
 		}
-		batch.Queue(
-			`INSERT INTO events (aggregate_type, aggregate_id, sequence, event_type, payload)
-			 VALUES ($1, $2, $3, $4, $5)`,
-			aggregateType, aggregateID, expectedSeq+int64(i)+1, EventType(evt), payload,
-		)
 	}
 
 	tx, err := s.pool.Begin(ctx)
@@ -52,7 +76,7 @@ func (s *PostgresStore) Append(ctx context.Context, aggregateType, aggregateID s
 	defer tx.Rollback(ctx)
 
 	br := tx.SendBatch(ctx, batch)
-	for range events {
+	for range rows {
 		if _, err := br.Exec(); err != nil {
 			br.Close()
 			var pgErr *pgconn.PgError

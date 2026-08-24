@@ -7,6 +7,7 @@
 package v1
 
 import (
+	v1 "github.com/namelessnotion/money_flow/go/gen/proto/shared/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -20,58 +21,6 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
-
-type Allows int32
-
-const (
-	Allows_ALLOWS_UNSPECIFIED                Allows = 0
-	Allows_ALLOWS_TRANSFER_ONLY              Allows = 1
-	Allows_ALLOWS_HALF_TRANSFER_ONLY         Allows = 2
-	Allows_ALLOWS_HALF_TRANSFER_AND_TRANSFER Allows = 3
-)
-
-// Enum value maps for Allows.
-var (
-	Allows_name = map[int32]string{
-		0: "ALLOWS_UNSPECIFIED",
-		1: "ALLOWS_TRANSFER_ONLY",
-		2: "ALLOWS_HALF_TRANSFER_ONLY",
-		3: "ALLOWS_HALF_TRANSFER_AND_TRANSFER",
-	}
-	Allows_value = map[string]int32{
-		"ALLOWS_UNSPECIFIED":                0,
-		"ALLOWS_TRANSFER_ONLY":              1,
-		"ALLOWS_HALF_TRANSFER_ONLY":         2,
-		"ALLOWS_HALF_TRANSFER_AND_TRANSFER": 3,
-	}
-)
-
-func (x Allows) Enum() *Allows {
-	p := new(Allows)
-	*p = x
-	return p
-}
-
-func (x Allows) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (Allows) Descriptor() protoreflect.EnumDescriptor {
-	return file_holder_v1_holder_proto_enumTypes[0].Descriptor()
-}
-
-func (Allows) Type() protoreflect.EnumType {
-	return &file_holder_v1_holder_proto_enumTypes[0]
-}
-
-func (x Allows) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use Allows.Descriptor instead.
-func (Allows) EnumDescriptor() ([]byte, []int) {
-	return file_holder_v1_holder_proto_rawDescGZIP(), []int{0}
-}
 
 type Memo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -234,7 +183,7 @@ type AddWalletRequest struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	WalletId      string                 `protobuf:"bytes,2,opt,name=wallet_id,json=walletId,proto3" json:"wallet_id,omitempty"`
 	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Allows        Allows                 `protobuf:"varint,4,opt,name=allows,proto3,enum=holder.v1.Allows" json:"allows,omitempty"`
+	Allows        v1.Allows              `protobuf:"varint,4,opt,name=allows,proto3,enum=shared.v1.Allows" json:"allows,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -290,11 +239,11 @@ func (x *AddWalletRequest) GetName() string {
 	return ""
 }
 
-func (x *AddWalletRequest) GetAllows() Allows {
+func (x *AddWalletRequest) GetAllows() v1.Allows {
 	if x != nil {
 		return x.Allows
 	}
-	return Allows_ALLOWS_UNSPECIFIED
+	return v1.Allows(0)
 }
 
 type HolderAddedWallet struct {
@@ -302,7 +251,7 @@ type HolderAddedWallet struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	WalletId      string                 `protobuf:"bytes,2,opt,name=wallet_id,json=walletId,proto3" json:"wallet_id,omitempty"`
 	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Allows        Allows                 `protobuf:"varint,4,opt,name=allows,proto3,enum=holder.v1.Allows" json:"allows,omitempty"`
+	Allows        v1.Allows              `protobuf:"varint,4,opt,name=allows,proto3,enum=shared.v1.Allows" json:"allows,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -358,11 +307,11 @@ func (x *HolderAddedWallet) GetName() string {
 	return ""
 }
 
-func (x *HolderAddedWallet) GetAllows() Allows {
+func (x *HolderAddedWallet) GetAllows() v1.Allows {
 	if x != nil {
 		return x.Allows
 	}
-	return Allows_ALLOWS_UNSPECIFIED
+	return v1.Allows(0)
 }
 
 type HolderRejectedWallet struct {
@@ -589,11 +538,340 @@ func (*AddWalletResponse_HolderAddedWallet) isAddWalletResponse_Result() {}
 
 func (*AddWalletResponse_HolderRejectedWallet) isAddWalletResponse_Result() {}
 
+// One Wallet to open as part of provisioning. The caller assigns wallet_id, so
+// a retry after an ambiguous failure converges on the same Wallet instead of
+// opening a second one — the same contract as EstablishRequest.id.
+//
+// name is opaque to this service. Callers use it for whatever classification
+// their own domain has; nothing here interprets it.
+type WalletSpec struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WalletId      string                 `protobuf:"bytes,1,opt,name=wallet_id,json=walletId,proto3" json:"wallet_id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Allows        v1.Allows              `protobuf:"varint,3,opt,name=allows,proto3,enum=shared.v1.Allows" json:"allows,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WalletSpec) Reset() {
+	*x = WalletSpec{}
+	mi := &file_holder_v1_holder_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WalletSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WalletSpec) ProtoMessage() {}
+
+func (x *WalletSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_holder_v1_holder_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WalletSpec.ProtoReflect.Descriptor instead.
+func (*WalletSpec) Descriptor() ([]byte, []int) {
+	return file_holder_v1_holder_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *WalletSpec) GetWalletId() string {
+	if x != nil {
+		return x.WalletId
+	}
+	return ""
+}
+
+func (x *WalletSpec) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *WalletSpec) GetAllows() v1.Allows {
+	if x != nil {
+		return x.Allows
+	}
+	return v1.Allows(0)
+}
+
+// Establishes a Holder and opens its Wallets as one all-or-nothing unit, so a
+// Holder can never end up half-provisioned. Idempotent per id: re-provisioning
+// appends only what is missing and returns the Holder as it stands.
+//
+// The events recorded are exactly HolderEstablished, WalletOpened and
+// HolderAddedWallet — the same history a caller would produce by invoking
+// Establish and then AddWallet for each Wallet. Provisioning is a transport
+// convenience, not a new domain concept, so nothing about it is written to the
+// log and removing this rpc later would invalidate no stored event.
+type ProvisionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Memos         map[string]*Memo       `protobuf:"bytes,2,rep,name=memos,proto3" json:"memos,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Wallets       []*WalletSpec          `protobuf:"bytes,3,rep,name=wallets,proto3" json:"wallets,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProvisionRequest) Reset() {
+	*x = ProvisionRequest{}
+	mi := &file_holder_v1_holder_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProvisionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProvisionRequest) ProtoMessage() {}
+
+func (x *ProvisionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_holder_v1_holder_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProvisionRequest.ProtoReflect.Descriptor instead.
+func (*ProvisionRequest) Descriptor() ([]byte, []int) {
+	return file_holder_v1_holder_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ProvisionRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ProvisionRequest) GetMemos() map[string]*Memo {
+	if x != nil {
+		return x.Memos
+	}
+	return nil
+}
+
+func (x *ProvisionRequest) GetWallets() []*WalletSpec {
+	if x != nil {
+		return x.Wallets
+	}
+	return nil
+}
+
+type HolderProvisioned struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	WalletIds     []string               `protobuf:"bytes,2,rep,name=wallet_ids,json=walletIds,proto3" json:"wallet_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HolderProvisioned) Reset() {
+	*x = HolderProvisioned{}
+	mi := &file_holder_v1_holder_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HolderProvisioned) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HolderProvisioned) ProtoMessage() {}
+
+func (x *HolderProvisioned) ProtoReflect() protoreflect.Message {
+	mi := &file_holder_v1_holder_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HolderProvisioned.ProtoReflect.Descriptor instead.
+func (*HolderProvisioned) Descriptor() ([]byte, []int) {
+	return file_holder_v1_holder_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *HolderProvisioned) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *HolderProvisioned) GetWalletIds() []string {
+	if x != nil {
+		return x.WalletIds
+	}
+	return nil
+}
+
+type HolderProvisionRejected struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HolderProvisionRejected) Reset() {
+	*x = HolderProvisionRejected{}
+	mi := &file_holder_v1_holder_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HolderProvisionRejected) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HolderProvisionRejected) ProtoMessage() {}
+
+func (x *HolderProvisionRejected) ProtoReflect() protoreflect.Message {
+	mi := &file_holder_v1_holder_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HolderProvisionRejected.ProtoReflect.Descriptor instead.
+func (*HolderProvisionRejected) Descriptor() ([]byte, []int) {
+	return file_holder_v1_holder_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *HolderProvisionRejected) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *HolderProvisionRejected) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type ProvisionResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Types that are valid to be assigned to Result:
+	//
+	//	*ProvisionResponse_HolderProvisioned
+	//	*ProvisionResponse_HolderProvisionRejected
+	Result        isProvisionResponse_Result `protobuf_oneof:"result"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProvisionResponse) Reset() {
+	*x = ProvisionResponse{}
+	mi := &file_holder_v1_holder_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProvisionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProvisionResponse) ProtoMessage() {}
+
+func (x *ProvisionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_holder_v1_holder_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProvisionResponse.ProtoReflect.Descriptor instead.
+func (*ProvisionResponse) Descriptor() ([]byte, []int) {
+	return file_holder_v1_holder_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ProvisionResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ProvisionResponse) GetResult() isProvisionResponse_Result {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
+func (x *ProvisionResponse) GetHolderProvisioned() *HolderProvisioned {
+	if x != nil {
+		if x, ok := x.Result.(*ProvisionResponse_HolderProvisioned); ok {
+			return x.HolderProvisioned
+		}
+	}
+	return nil
+}
+
+func (x *ProvisionResponse) GetHolderProvisionRejected() *HolderProvisionRejected {
+	if x != nil {
+		if x, ok := x.Result.(*ProvisionResponse_HolderProvisionRejected); ok {
+			return x.HolderProvisionRejected
+		}
+	}
+	return nil
+}
+
+type isProvisionResponse_Result interface {
+	isProvisionResponse_Result()
+}
+
+type ProvisionResponse_HolderProvisioned struct {
+	HolderProvisioned *HolderProvisioned `protobuf:"bytes,2,opt,name=holder_provisioned,json=holderProvisioned,proto3,oneof"`
+}
+
+type ProvisionResponse_HolderProvisionRejected struct {
+	HolderProvisionRejected *HolderProvisionRejected `protobuf:"bytes,3,opt,name=holder_provision_rejected,json=holderProvisionRejected,proto3,oneof"`
+}
+
+func (*ProvisionResponse_HolderProvisioned) isProvisionResponse_Result() {}
+
+func (*ProvisionResponse_HolderProvisionRejected) isProvisionResponse_Result() {}
+
 var File_holder_v1_holder_proto protoreflect.FileDescriptor
 
 const file_holder_v1_holder_proto_rawDesc = "" +
 	"\n" +
-	"\x16holder/v1/holder.proto\x12\tholder.v1\",\n" +
+	"\x16holder/v1/holder.proto\x12\tholder.v1\x1a\x16shared/v1/allows.proto\",\n" +
 	"\x04Memo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\"\xab\x01\n" +
@@ -615,12 +893,12 @@ const file_holder_v1_holder_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\twallet_id\x18\x02 \x01(\tR\bwalletId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12)\n" +
-	"\x06allows\x18\x04 \x01(\x0e2\x11.holder.v1.AllowsR\x06allows\"\x7f\n" +
+	"\x06allows\x18\x04 \x01(\x0e2\x11.shared.v1.AllowsR\x06allows\"\x7f\n" +
 	"\x11HolderAddedWallet\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\twallet_id\x18\x02 \x01(\tR\bwalletId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12)\n" +
-	"\x06allows\x18\x04 \x01(\x0e2\x11.holder.v1.AllowsR\x06allows\"[\n" +
+	"\x06allows\x18\x04 \x01(\x0e2\x11.shared.v1.AllowsR\x06allows\"[\n" +
 	"\x14HolderRejectedWallet\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\twallet_id\x18\x02 \x01(\tR\bwalletId\x12\x16\n" +
@@ -633,15 +911,36 @@ const file_holder_v1_holder_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12N\n" +
 	"\x13holder_added_wallet\x18\x02 \x01(\v2\x1c.holder.v1.HolderAddedWalletH\x00R\x11holderAddedWallet\x12W\n" +
 	"\x16holder_rejected_wallet\x18\x03 \x01(\v2\x1f.holder.v1.HolderRejectedWalletH\x00R\x14holderRejectedWalletB\b\n" +
-	"\x06result*\x80\x01\n" +
-	"\x06Allows\x12\x16\n" +
-	"\x12ALLOWS_UNSPECIFIED\x10\x00\x12\x18\n" +
-	"\x14ALLOWS_TRANSFER_ONLY\x10\x01\x12\x1d\n" +
-	"\x19ALLOWS_HALF_TRANSFER_ONLY\x10\x02\x12%\n" +
-	"!ALLOWS_HALF_TRANSFER_AND_TRANSFER\x10\x032\xa3\x01\n" +
+	"\x06result\"h\n" +
+	"\n" +
+	"WalletSpec\x12\x1b\n" +
+	"\twallet_id\x18\x01 \x01(\tR\bwalletId\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12)\n" +
+	"\x06allows\x18\x03 \x01(\x0e2\x11.shared.v1.AllowsR\x06allows\"\xdc\x01\n" +
+	"\x10ProvisionRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12<\n" +
+	"\x05memos\x18\x02 \x03(\v2&.holder.v1.ProvisionRequest.MemosEntryR\x05memos\x12/\n" +
+	"\awallets\x18\x03 \x03(\v2\x15.holder.v1.WalletSpecR\awallets\x1aI\n" +
+	"\n" +
+	"MemosEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12%\n" +
+	"\x05value\x18\x02 \x01(\v2\x0f.holder.v1.MemoR\x05value:\x028\x01\"B\n" +
+	"\x11HolderProvisioned\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"wallet_ids\x18\x02 \x03(\tR\twalletIds\"A\n" +
+	"\x17HolderProvisionRejected\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"\xde\x01\n" +
+	"\x11ProvisionResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12M\n" +
+	"\x12holder_provisioned\x18\x02 \x01(\v2\x1c.holder.v1.HolderProvisionedH\x00R\x11holderProvisioned\x12`\n" +
+	"\x19holder_provision_rejected\x18\x03 \x01(\v2\".holder.v1.HolderProvisionRejectedH\x00R\x17holderProvisionRejectedB\b\n" +
+	"\x06result2\xed\x01\n" +
 	"\rHolderService\x12H\n" +
 	"\tEstablish\x12\x1b.holder.v1.EstablishRequest\x1a\x1c.holder.v1.EstablishResponse\"\x00\x12H\n" +
-	"\tAddWallet\x12\x1b.holder.v1.AddWalletRequest\x1a\x1c.holder.v1.AddWalletResponse\"\x00B=Z;github.com/namelessnotion/money_flow/go/gen/proto/holder/v1b\x06proto3"
+	"\tAddWallet\x12\x1b.holder.v1.AddWalletRequest\x1a\x1c.holder.v1.AddWalletResponse\"\x00\x12H\n" +
+	"\tProvision\x12\x1b.holder.v1.ProvisionRequest\x1a\x1c.holder.v1.ProvisionResponse\"\x00B=Z;github.com/namelessnotion/money_flow/go/gen/proto/holder/v1b\x06proto3"
 
 var (
 	file_holder_v1_holder_proto_rawDescOnce sync.Once
@@ -655,40 +954,53 @@ func file_holder_v1_holder_proto_rawDescGZIP() []byte {
 	return file_holder_v1_holder_proto_rawDescData
 }
 
-var file_holder_v1_holder_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_holder_v1_holder_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_holder_v1_holder_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_holder_v1_holder_proto_goTypes = []any{
-	(Allows)(0),                  // 0: holder.v1.Allows
-	(*Memo)(nil),                 // 1: holder.v1.Memo
-	(*EstablishRequest)(nil),     // 2: holder.v1.EstablishRequest
-	(*HolderEstablished)(nil),    // 3: holder.v1.HolderEstablished
-	(*AddWalletRequest)(nil),     // 4: holder.v1.AddWalletRequest
-	(*HolderAddedWallet)(nil),    // 5: holder.v1.HolderAddedWallet
-	(*HolderRejectedWallet)(nil), // 6: holder.v1.HolderRejectedWallet
-	(*EstablishResponse)(nil),    // 7: holder.v1.EstablishResponse
-	(*AddWalletResponse)(nil),    // 8: holder.v1.AddWalletResponse
-	nil,                          // 9: holder.v1.EstablishRequest.MemosEntry
-	nil,                          // 10: holder.v1.HolderEstablished.MemosEntry
+	(*Memo)(nil),                    // 0: holder.v1.Memo
+	(*EstablishRequest)(nil),        // 1: holder.v1.EstablishRequest
+	(*HolderEstablished)(nil),       // 2: holder.v1.HolderEstablished
+	(*AddWalletRequest)(nil),        // 3: holder.v1.AddWalletRequest
+	(*HolderAddedWallet)(nil),       // 4: holder.v1.HolderAddedWallet
+	(*HolderRejectedWallet)(nil),    // 5: holder.v1.HolderRejectedWallet
+	(*EstablishResponse)(nil),       // 6: holder.v1.EstablishResponse
+	(*AddWalletResponse)(nil),       // 7: holder.v1.AddWalletResponse
+	(*WalletSpec)(nil),              // 8: holder.v1.WalletSpec
+	(*ProvisionRequest)(nil),        // 9: holder.v1.ProvisionRequest
+	(*HolderProvisioned)(nil),       // 10: holder.v1.HolderProvisioned
+	(*HolderProvisionRejected)(nil), // 11: holder.v1.HolderProvisionRejected
+	(*ProvisionResponse)(nil),       // 12: holder.v1.ProvisionResponse
+	nil,                             // 13: holder.v1.EstablishRequest.MemosEntry
+	nil,                             // 14: holder.v1.HolderEstablished.MemosEntry
+	nil,                             // 15: holder.v1.ProvisionRequest.MemosEntry
+	(v1.Allows)(0),                  // 16: shared.v1.Allows
 }
 var file_holder_v1_holder_proto_depIdxs = []int32{
-	9,  // 0: holder.v1.EstablishRequest.memos:type_name -> holder.v1.EstablishRequest.MemosEntry
-	10, // 1: holder.v1.HolderEstablished.memos:type_name -> holder.v1.HolderEstablished.MemosEntry
-	0,  // 2: holder.v1.AddWalletRequest.allows:type_name -> holder.v1.Allows
-	0,  // 3: holder.v1.HolderAddedWallet.allows:type_name -> holder.v1.Allows
-	3,  // 4: holder.v1.EstablishResponse.holder_established:type_name -> holder.v1.HolderEstablished
-	5,  // 5: holder.v1.AddWalletResponse.holder_added_wallet:type_name -> holder.v1.HolderAddedWallet
-	6,  // 6: holder.v1.AddWalletResponse.holder_rejected_wallet:type_name -> holder.v1.HolderRejectedWallet
-	1,  // 7: holder.v1.EstablishRequest.MemosEntry.value:type_name -> holder.v1.Memo
-	1,  // 8: holder.v1.HolderEstablished.MemosEntry.value:type_name -> holder.v1.Memo
-	2,  // 9: holder.v1.HolderService.Establish:input_type -> holder.v1.EstablishRequest
-	4,  // 10: holder.v1.HolderService.AddWallet:input_type -> holder.v1.AddWalletRequest
-	7,  // 11: holder.v1.HolderService.Establish:output_type -> holder.v1.EstablishResponse
-	8,  // 12: holder.v1.HolderService.AddWallet:output_type -> holder.v1.AddWalletResponse
-	11, // [11:13] is the sub-list for method output_type
-	9,  // [9:11] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	13, // 0: holder.v1.EstablishRequest.memos:type_name -> holder.v1.EstablishRequest.MemosEntry
+	14, // 1: holder.v1.HolderEstablished.memos:type_name -> holder.v1.HolderEstablished.MemosEntry
+	16, // 2: holder.v1.AddWalletRequest.allows:type_name -> shared.v1.Allows
+	16, // 3: holder.v1.HolderAddedWallet.allows:type_name -> shared.v1.Allows
+	2,  // 4: holder.v1.EstablishResponse.holder_established:type_name -> holder.v1.HolderEstablished
+	4,  // 5: holder.v1.AddWalletResponse.holder_added_wallet:type_name -> holder.v1.HolderAddedWallet
+	5,  // 6: holder.v1.AddWalletResponse.holder_rejected_wallet:type_name -> holder.v1.HolderRejectedWallet
+	16, // 7: holder.v1.WalletSpec.allows:type_name -> shared.v1.Allows
+	15, // 8: holder.v1.ProvisionRequest.memos:type_name -> holder.v1.ProvisionRequest.MemosEntry
+	8,  // 9: holder.v1.ProvisionRequest.wallets:type_name -> holder.v1.WalletSpec
+	10, // 10: holder.v1.ProvisionResponse.holder_provisioned:type_name -> holder.v1.HolderProvisioned
+	11, // 11: holder.v1.ProvisionResponse.holder_provision_rejected:type_name -> holder.v1.HolderProvisionRejected
+	0,  // 12: holder.v1.EstablishRequest.MemosEntry.value:type_name -> holder.v1.Memo
+	0,  // 13: holder.v1.HolderEstablished.MemosEntry.value:type_name -> holder.v1.Memo
+	0,  // 14: holder.v1.ProvisionRequest.MemosEntry.value:type_name -> holder.v1.Memo
+	1,  // 15: holder.v1.HolderService.Establish:input_type -> holder.v1.EstablishRequest
+	3,  // 16: holder.v1.HolderService.AddWallet:input_type -> holder.v1.AddWalletRequest
+	9,  // 17: holder.v1.HolderService.Provision:input_type -> holder.v1.ProvisionRequest
+	6,  // 18: holder.v1.HolderService.Establish:output_type -> holder.v1.EstablishResponse
+	7,  // 19: holder.v1.HolderService.AddWallet:output_type -> holder.v1.AddWalletResponse
+	12, // 20: holder.v1.HolderService.Provision:output_type -> holder.v1.ProvisionResponse
+	18, // [18:21] is the sub-list for method output_type
+	15, // [15:18] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_holder_v1_holder_proto_init() }
@@ -703,19 +1015,22 @@ func file_holder_v1_holder_proto_init() {
 		(*AddWalletResponse_HolderAddedWallet)(nil),
 		(*AddWalletResponse_HolderRejectedWallet)(nil),
 	}
+	file_holder_v1_holder_proto_msgTypes[12].OneofWrappers = []any{
+		(*ProvisionResponse_HolderProvisioned)(nil),
+		(*ProvisionResponse_HolderProvisionRejected)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_holder_v1_holder_proto_rawDesc), len(file_holder_v1_holder_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   10,
+			NumEnums:      0,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_holder_v1_holder_proto_goTypes,
 		DependencyIndexes: file_holder_v1_holder_proto_depIdxs,
-		EnumInfos:         file_holder_v1_holder_proto_enumTypes,
 		MessageInfos:      file_holder_v1_holder_proto_msgTypes,
 	}.Build()
 	File_holder_v1_holder_proto = out.File
