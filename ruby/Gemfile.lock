@@ -2,7 +2,35 @@ GEM
   remote: http://rubygems.org/
   specs:
     ast (2.4.3)
+    async (2.44.1)
+      console (~> 1.29)
+      fiber-annotation
+      io-event (~> 1.11)
+    async-container (0.38.0)
+      async (~> 2.44)
+    async-http (0.101.0)
+      async (>= 2.35.1)
+      async-pool (~> 0.11)
+      io-endpoint (~> 0.18)
+      io-stream (~> 0.14)
+      protocol-http (~> 0.66)
+      protocol-http1 (~> 0.41)
+      protocol-http2 (~> 0.26)
+      protocol-url (~> 0.2)
+    async-http-cache (0.4.6)
+      async-http (~> 0.56)
+    async-pool (0.11.2)
+      async (>= 2.0)
+    async-service (0.25.0)
+      async
+      async-container (~> 0.34)
+      string-format (~> 0.2)
+    async-utilization (0.5.0)
+      console (~> 1.0)
     backport (1.2.0)
+    bake (0.25.0)
+      bigdecimal
+      samovar (~> 2.1)
     base64 (0.3.0)
     benchmark (0.5.0)
     bigdecimal (4.1.2)
@@ -10,16 +38,36 @@ GEM
       rubocop (~> 1.0)
     commander (5.0.0)
       highline (~> 3.0.0)
+    console (1.37.0)
+      fiber-annotation
+      fiber-local (~> 1.1)
+      json
     date (3.5.1)
     diff-lcs (1.6.2)
     erb (6.0.7)
     erubi (1.13.1)
+    falcon (0.57.0)
+      async
+      async-container (~> 0.20)
+      async-http (~> 0.97)
+      async-http-cache (~> 0.4)
+      async-service (~> 0.19)
+      async-utilization (~> 0.3)
+      bundler
+      localhost (~> 1.1)
+      openssl (>= 3.0)
+      protocol-http (~> 0.31)
+      protocol-rack (~> 0.7)
+      samovar (~> 2.3)
     faraday (2.14.3)
       faraday-net_http (>= 2.0, < 3.5)
       json
       logger
     faraday-net_http (3.4.4)
       net-http (~> 0.5)
+    fiber-annotation (0.2.0)
+    fiber-local (1.1.0)
+      fiber-storage
     fiber-storage (1.0.1)
     google-protobuf (4.35.1)
       bigdecimal
@@ -53,6 +101,11 @@ GEM
       fiber-storage
       logger
     highline (3.0.1)
+    io-endpoint (0.18.0)
+      openssl (>= 3.3.0)
+    io-event (1.19.5)
+    io-stream (0.14.0)
+      openssl (>= 3.3)
     jaro_winkler (1.7.0)
     json (2.21.2)
     kramdown (2.5.2)
@@ -61,6 +114,8 @@ GEM
       kramdown (~> 2.0)
     language_server-protocol (3.17.0.6)
     lint_roller (1.1.0)
+    localhost (1.8.0)
+      bake
     logger (1.7.0)
     mini_portile2 (2.8.9)
     net-http (0.9.1)
@@ -83,6 +138,7 @@ GEM
       racc (~> 1.4)
     observer (0.1.2)
     open3 (0.2.1)
+    openssl (4.0.2)
     ostruct (0.6.3)
     parallel (2.1.0)
     parlour (9.1.2)
@@ -101,11 +157,25 @@ GEM
     pg (1.6.3-x86_64-linux)
     pg (1.6.3-x86_64-linux-musl)
     prism (1.9.0)
+    protocol-hpack (1.5.1)
+    protocol-http (0.71.0)
+    protocol-http1 (0.41.0)
+      protocol-http (~> 0.68)
+    protocol-http2 (0.26.2)
+      protocol-hpack (~> 1.4)
+      protocol-http (~> 0.62)
+    protocol-rack (0.22.1)
+      io-stream (>= 0.10)
+      protocol-http (~> 0.58)
+      rack (>= 1.0)
+    protocol-url (0.18.0)
     psych (5.4.0)
       date
       stringio
     racc (1.8.1)
     rack (3.2.7)
+    rackup (2.3.1)
+      rack (>= 3)
     rainbow (3.1.1)
     rake (13.4.2)
     rbi (0.4.3)
@@ -161,6 +231,8 @@ GEM
     rubydex (0.3.0-arm64-darwin)
     rubydex (0.3.0-x86_64-darwin)
     rubydex (0.3.0-x86_64-linux)
+    samovar (2.5.1)
+      console (~> 1.0)
     sequel (5.107.0)
       bigdecimal
     solargraph (0.60.3)
@@ -212,6 +284,7 @@ GEM
       rexml (>= 3.2.6)
       sorbet-static-and-runtime (>= 0.5.10187)
       thor (>= 0.19.2)
+    string-format (0.2.0)
     stringio (3.2.0)
     tapioca (0.19.2)
       benchmark
@@ -236,6 +309,7 @@ GEM
       unicode-emoji (~> 4.1)
     unicode-emoji (4.2.0)
     uri (1.1.1)
+    webrick (1.9.2)
     yard (0.9.45)
     yard-activesupport-concern (0.0.1)
       yard (>= 0.8)
@@ -254,9 +328,12 @@ PLATFORMS
 
 DEPENDENCIES
   code-scanning-rubocop
+  falcon
   google-protobuf
   graphql
   pg
+  rack
+  rackup
   rspec
   rubocop
   rubocop-rspec
@@ -266,6 +343,7 @@ DEPENDENCIES
   sorbet-runtime
   tapioca
   twirp
+  webrick
 
 RUBY VERSION
    ruby 3.4.10p104

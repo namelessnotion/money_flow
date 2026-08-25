@@ -5,7 +5,7 @@ require_relative 'base_object'
 
 module Types
   # GraphQL type for the Entity model
-  class EntityType < BaseObject
+  class Entity < BaseObject
     field :id, ID, null: false
     field :name, String, null: false
     field :holder_uuid, ID, null: false

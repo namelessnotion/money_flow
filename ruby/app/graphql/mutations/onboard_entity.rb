@@ -9,7 +9,7 @@ module Mutations
   class OnboardEntity < BaseMutation
     argument :name, String, required: true
 
-    field :entity, Types::EntityType, null: true
+    field :entity, Types::Entity, null: true
 
     sig { params(name: String).returns(T::Hash[Symbol, Models::Entity]) }
     def resolve(name:)

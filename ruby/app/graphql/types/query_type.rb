@@ -8,7 +8,8 @@ module Types
   # valid even before there's anything real to query — replace `ok` with
   # real fields as read models come online.
   class QueryType < BaseObject
-    field :ok, Boolean, null: false, method: :ok?, description: 'Health check placeholder until real queries exist.'
+    field :ok, Boolean, null: false, resolver_method: :ok?,
+                        description: 'Health check placeholder until real queries exist.'
 
     sig { returns(T::Boolean) }
     def ok?

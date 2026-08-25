@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+# typed: strict
+
+bind = ENV.fetch('LISTEN_ADDR', 'http://0.0.0.0:9292')
+gemfile = File.expand_path('../Gemfile', __dir__)
+config = File.expand_path('../config.ru', __dir__)
+
+exec(
+  { 'BUNDLE_GEMFILE' => gemfile },
+  'bundle', 'exec', 'falcon', 'serve',
+  '--bind', bind,
+  '--config', config,
+  '--threaded',
+  '--count', '1',
+  '--no-restart'
+)
