@@ -68,6 +68,9 @@ class Models::Entity
     sig { params(args: T.untyped, block: T.untyped).returns(::Models::Entity::PrivateDataset) }
     def distinct(*args, &block); end
 
+    sig { params(args: T.untyped, block: T.untyped).returns(::Models::Entity::PrivateDataset) }
+    def eager(*args, &block); end
+
     sig { returns(T::Boolean) }
     def empty?; end
 
@@ -138,6 +141,9 @@ class Models::Entity
 
     sig { params(block: T.proc.params(arg0: ::Models::Entity).void).returns(::Models::Entity::PrivateDataset) }
     def each(&block); end
+
+    sig { params(args: T.untyped, block: T.untyped).returns(::Models::Entity::PrivateDataset) }
+    def eager(*args, &block); end
 
     sig { returns(T::Boolean) }
     def empty?; end

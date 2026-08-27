@@ -45,9 +45,14 @@ module Tapioca
       # Query methods that return a new dataset, so chaining stays typed.
       # `select` deliberately shadows `Enumerable#select` here — Sequel overrides it
       # with the SQL builder, so this matches runtime.
+      #
+      # `eager` lives on `Sequel::Model::Associations::DatasetMethods`, a module
+      # `extend`ed onto a model's dataset instance at runtime rather than included
+      # in `Sequel::Dataset` itself — the exact reason it's invisible to Sorbet
+      # unless listed here explicitly.
       CHAINABLE = T.let(
         %w[where exclude filter order order_by reverse limit offset select
-           select_append distinct group group_by having].freeze,
+           select_append distinct group group_by having eager].freeze,
         T::Array[String]
       )
 

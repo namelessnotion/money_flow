@@ -1,0 +1,10 @@
+# frozen_string_literal: true
+
+FactoryBot.define do
+  factory :entity, class: 'Models::Entity' do
+    sequence(:name) { |n| "Entity #{n}" }
+    holder_uuid { SecureRandom.uuid_v7 }
+
+    to_create(&:save)
+  end
+end

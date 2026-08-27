@@ -3,9 +3,12 @@
 
 require_relative '../types/query_type'
 require_relative '../types/mutation_type'
+require_relative '../connections/sequel_dataset_connection'
 
 # GraphQL schema for the MoneyFlow application
-class MoneyFlow < GraphQL::Schema
+class MoneyFlowSchema < GraphQL::Schema
   query Types::QueryType
   mutation Types::MutationType
+
+  connections.add(Sequel::Dataset, Connections::SequelDatasetConnection)
 end

@@ -12,8 +12,18 @@ class App
   sig { params(env: T::Hash[String, T.untyped]).returns(T::Array[T.untyped]) }
   def call(env)
     request = Rack::Request.new(env)
+    status, headers, body = route(request)
 
+    [status, headers.merge(cors_headers(request)), body]
+  end
+
+  private
+
+  sig { params(request: Rack::Request).returns(T::Array[T.untyped]) }
+  def route(request)
     case [request.request_method, request.path]
+    in ['OPTIONS', '/graphql']
+      preflight
     in ['GET', '/healthz']
       healthz
     in ['POST', '/graphql']
@@ -23,7 +33,25 @@ class App
     end
   end
 
-  private
+  # Only the client origin needs cross-origin access to the GraphQL API;
+  # everything else (healthz, twirp) is same-origin or server-to-server.
+  sig { returns(String) }
+  def allowed_origin
+    ENV.fetch('CORS_ALLOWED_ORIGIN', 'https://app.local.namelessnotion.com')
+  end
+
+  sig { params(request: Rack::Request).returns(T::Hash[String, String]) }
+  def cors_headers(request)
+    origin = request.get_header('HTTP_ORIGIN')
+    return {} unless origin == allowed_origin
+
+    { 'access-control-allow-origin' => origin, 'vary' => 'Origin' }
+  end
+
+  sig { returns(T::Array[T.untyped]) }
+  def preflight
+    [204, { 'access-control-allow-methods' => 'POST, OPTIONS', 'access-control-allow-headers' => 'Content-Type' }, []]
+  end
 
   sig { returns(T::Array[T.untyped]) }
   def healthz
@@ -45,7 +73,7 @@ class App
 
   sig { params(payload: T::Hash[String, T.untyped]).returns(T::Array[T.untyped]) }
   def single(payload)
-    result = MoneyFlow.execute(
+    result = MoneyFlowSchema.execute(
       payload['query'],
       variables: payload['variables'] || {},
       operation_name: payload['operationName'],
@@ -68,7 +96,7 @@ class App
       }
     end
 
-    results = MoneyFlow.multiplex(queries, context: {})
+    results = MoneyFlowSchema.multiplex(queries, context: {})
 
     json_response(200, results.map(&:to_h))
   end

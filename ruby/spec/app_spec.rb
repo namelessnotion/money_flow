@@ -32,7 +32,7 @@ RSpec.describe App do
     let(:onboard_entity_variables) { { name: 'Test Entity' } }
 
     let(:holder_uuid) { SecureRandom.uuid_v7 }
-    let(:entity) { Models::Entity.create(name: 'Test Entity', holder_uuid: holder_uuid) }
+    let(:entity) { create(:entity, name: 'Test Entity', holder_uuid: holder_uuid) }
 
     before do
       service_double = instance_double(Services::OnboardEntity)
@@ -111,6 +111,58 @@ RSpec.describe App do
       response = mock_request.get('/nope')
 
       expect(response.status).to eq(404)
+    end
+  end
+
+  describe 'CORS' do
+    let(:allowed_origin) { 'https://app.local.namelessnotion.com' }
+
+    describe 'OPTIONS /graphql (preflight)' do
+      it 'allows the configured origin' do
+        response = mock_request.options(
+          '/graphql',
+          'HTTP_ORIGIN' => allowed_origin,
+          'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'POST'
+        )
+
+        expect(response.status).to eq(204)
+        expect(response.headers['access-control-allow-origin']).to eq(allowed_origin)
+        expect(response.headers['access-control-allow-methods']).to include('POST')
+      end
+
+      it 'omits the allow-origin header for other origins' do
+        response = mock_request.options(
+          '/graphql',
+          'HTTP_ORIGIN' => 'https://evil.example.com',
+          'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'POST'
+        )
+
+        expect(response.headers['access-control-allow-origin']).to be_nil
+      end
+    end
+
+    describe 'POST /graphql' do
+      it 'includes the allow-origin header for the configured origin' do
+        response = mock_request.post(
+          '/graphql',
+          input: JSON.generate(query: '{ ok }'),
+          'CONTENT_TYPE' => 'application/json',
+          'HTTP_ORIGIN' => allowed_origin
+        )
+
+        expect(response.headers['access-control-allow-origin']).to eq(allowed_origin)
+      end
+
+      it 'omits the allow-origin header for other origins' do
+        response = mock_request.post(
+          '/graphql',
+          input: JSON.generate(query: '{ ok }'),
+          'CONTENT_TYPE' => 'application/json',
+          'HTTP_ORIGIN' => 'https://evil.example.com'
+        )
+
+        expect(response.headers['access-control-allow-origin']).to be_nil
+      end
     end
   end
 end

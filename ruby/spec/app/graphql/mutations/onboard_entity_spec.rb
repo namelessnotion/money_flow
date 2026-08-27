@@ -18,12 +18,12 @@ RSpec.describe Mutations::OnboardEntity do
   end
 
   def execute(name:)
-    MoneyFlow.execute(mutation, variables: { name: name }).to_h
+    MoneyFlowSchema.execute(mutation, variables: { name: name }).to_h
   end
 
   context 'when onboarding succeeds' do
     let(:holder_uuid) { SecureRandom.uuid_v7 }
-    let(:entity) { Models::Entity.create(name: 'Test Entity', holder_uuid: holder_uuid) }
+    let(:entity) { create(:entity, name: 'Test Entity', holder_uuid: holder_uuid) }
     let(:service_double) { instance_double(Services::OnboardEntity) }
 
     before do

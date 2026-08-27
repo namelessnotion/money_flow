@@ -9,6 +9,11 @@ services:
       - "5432:5432"
     volumes:
       - money_flow_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U money_flow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   tigerbeetle:
     build:
@@ -22,6 +27,85 @@ services:
     volumes:
       - money_flow_tigerbeetle:/data
 
+  # Ruby/GraphQL business backend. Runs pending Sequel migrations on boot,
+  # then `bin/server` (falcon), reachable directly on :9292 or via the proxy
+  # at https://graphql.local.namelessnotion.com.
+  ruby:
+    build:
+      context: .
+      dockerfile: docker/ruby/Dockerfile
+    environment:
+      DATABASE_URL: postgres://money_flow:money_flow@postgres:5432/money_flow_dev?sslmode=disable
+      DB_HOST: postgres
+      CORS_ALLOWED_ORIGIN: https://app.local.namelessnotion.com
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "9292:9292"
+    volumes:
+      - ./ruby:/app
+
+  # Go event-store/twirp backend. Runs pending schema_migrations on boot,
+  # then the server, reachable directly on :8080 or via the proxy at
+  # https://rpc.local.namelessnotion.com.
+  go:
+    build:
+      context: .
+      dockerfile: docker/go/Dockerfile
+    environment:
+      DATABASE_URL: postgres://money_flow:money_flow@postgres:5432/money_flow_dev?sslmode=disable
+      DB_HOST: postgres
+      LISTEN_ADDR: ":8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./go:/app
+
+  # VueJS client, served by Vite's dev server. Reachable directly on :5173
+  # or via the proxy at https://app.local.namelessnotion.com.
+  client:
+    build:
+      context: .
+      dockerfile: docker/client/Dockerfile
+    environment:
+      VITE_DEV_HOST: app.local.namelessnotion.com
+      VITE_RUBY_SERVER_URL: http://ruby:9292
+      VITE_GRAPHQL_URL: https://graphql.local.namelessnotion.com/graphql
+    depends_on:
+      - ruby
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client:/app
+      - client_node_modules:/app/node_modules
+
+  # Reverse proxy fronting all three apps on ports 80 (redirects to 443) and
+  # 443 under local.namelessnotion.com subdomains. Add these to /etc/hosts (all
+  # pointing at 127.0.0.1):
+  #   app.local.namelessnotion.com
+  #   graphql.local.namelessnotion.com
+  #   rpc.local.namelessnotion.com
+  # Run bin/setup_local_ssl.sh (or `make ssl`) for a browser-trusted cert;
+  # until then it serves a self-signed placeholder, so HTTPS works but
+  # browsers show a warning.
+  proxy:
+    build:
+      context: ./docker/proxy
+    depends_on:
+      - client
+      - ruby
+      - go
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/proxy/certs:/etc/nginx/certs
+
 volumes:
   money_flow_postgres:
   money_flow_tigerbeetle:
+  client_node_modules:

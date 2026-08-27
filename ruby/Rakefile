@@ -1,5 +1,19 @@
 # frozen_string_literal: true
 
+namespace :graphql do
+  namespace :schema do
+    desc 'Dump the GraphQL schema definition to app/graphql/schemas/money_flow_schema.graphql'
+    task :dump do
+      require_relative 'lib/environment'
+
+      path = File.expand_path('app/graphql/schemas/money_flow_schema.graphql', __dir__)
+      File.write(path, "#{MoneyFlowSchema.to_definition.strip}\n")
+
+      puts "wrote #{File.join('app/graphql/schemas', File.basename(path))}"
+    end
+  end
+end
+
 namespace :db do
   desc 'Create a new migration file, e.g. rake db:new_migration[create_wallets]'
   task :new_migration, [:name] do |_t, args|

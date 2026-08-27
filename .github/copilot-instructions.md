@@ -4,21 +4,24 @@
 
 Run commands from the component directory unless noted otherwise.
 
-| Purpose | Command |
-| --- | --- |
-| Start local dependencies | `docker compose up -d` |
-| Apply Go event-store migrations | `cd go && DATABASE_URL=postgres://money_flow:money_flow@localhost:5432/money_flow_dev?sslmode=disable go run ./cmd/migrate up` |
-| Roll back the latest Go migration | `cd go && DATABASE_URL=postgres://money_flow:money_flow@localhost:5432/money_flow_dev?sslmode=disable go run ./cmd/migrate down` |
-| Run the Go server | `cd go && DATABASE_URL=postgres://money_flow:money_flow@localhost:5432/money_flow_dev?sslmode=disable go run ./cmd/server` |
-| Run all Go tests | `cd go && go test ./...` |
-| Run one Go package or test | `cd go && go test ./internal/wallet -run '^TestOpenRecordsWalletOpened$'` |
-| Apply Ruby migrations | `cd ruby && DATABASE_URL=postgres://money_flow:money_flow@localhost:5432/money_flow_dev?sslmode=disable bin/migrate up` |
-| Run all Ruby specs | `cd ruby && bundle exec rspec` |
-| Run one Ruby spec or example | `cd ruby && bundle exec rspec spec/app/services/onboard_entity_spec.rb:26` |
-| Lint Ruby | `cd ruby && bundle exec rubocop` |
-| Type-check Ruby | `cd ruby && bundle exec srb tc` |
-| Regenerate Protobuf/Twirp bindings | `bin/generate_protos.sh` |
-| Regenerate Sequel/Sorbet DSL RBIs | `cd ruby && DATABASE_URL=postgres://money_flow:money_flow@localhost:5432/money_flow_dev?sslmode=disable bundle exec tapioca dsl` |
+| Purpose                            | Command                                                                                                                          |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Start local dependencies           | `docker compose up -d`                                                                                                           |
+| Run the Vue client                 | `cd client && npm run dev`                                                                                                       |
+| Build the Vue client               | `cd client && npm run build`                                                                                                     |
+| Apply Go event-store migrations    | `cd go && DATABASE_URL=postgres://money_flow:money_flow@localhost:5432/money_flow_dev?sslmode=disable go run ./cmd/migrate up`   |
+| Roll back the latest Go migration  | `cd go && DATABASE_URL=postgres://money_flow:money_flow@localhost:5432/money_flow_dev?sslmode=disable go run ./cmd/migrate down` |
+| Run the Go server                  | `cd go && DATABASE_URL=postgres://money_flow:money_flow@localhost:5432/money_flow_dev?sslmode=disable go run ./cmd/server`       |
+| Run all Go tests                   | `cd go && go test ./...`                                                                                                         |
+| Run one Go package or test         | `cd go && go test ./internal/wallet -run '^TestOpenRecordsWalletOpened$'`                                                        |
+| Apply Ruby migrations              | `cd ruby && DATABASE_URL=postgres://money_flow:money_flow@localhost:5432/money_flow_dev?sslmode=disable bin/migrate up`          |
+| Run the Ruby HTTP server           | `cd ruby && bin/server`                                                                                                          |
+| Run all Ruby specs                 | `cd ruby && bundle exec rspec`                                                                                                   |
+| Run one Ruby spec or example       | `cd ruby && bundle exec rspec spec/app/services/onboard_entity_spec.rb:26`                                                       |
+| Lint Ruby                          | `cd ruby && bundle exec rubocop`                                                                                                 |
+| Type-check Ruby                    | `cd ruby && bundle exec srb tc`                                                                                                  |
+| Regenerate Protobuf/Twirp bindings | `bin/generate_protos.sh`                                                                                                         |
+| Regenerate Sequel/Sorbet DSL RBIs  | `cd ruby && DATABASE_URL=postgres://money_flow:money_flow@localhost:5432/money_flow_dev?sslmode=disable bundle exec tapioca dsl` |
 
 `bin/generate_protos.sh` deletes and recreates both `go/gen/proto` and
 `ruby/gen/proto`; edit only `proto/**/*.proto`, then regenerate and commit the
@@ -33,8 +36,14 @@ are separate: Go records versions in `schema_migrations`; Ruby uses
 ## Architecture
 
 This is a financial-system monorepo with a Go command/API side and a Ruby
-application side, coupled through versioned Protobuf contracts:
+application side, plus a Vue client, coupled through versioned Protobuf
+contracts:
 
+- `client/` is a Vue 3/Vite TypeScript single-page app. Its Apollo Client uses
+  `VITE_GRAPHQL_URL` when set, otherwise `/graphql`; Vite proxies that path to
+  Falcon at `VITE_RUBY_SERVER_URL` or `http://localhost:9292` during
+  development. Uses prelease of Apollo Client 4 and should favor using Vue
+  Apollo Composable.
 - `proto/` is the source of truth for domain messages and Twirp service
   interfaces. `holder.v1` and `wallet.v1` are currently implemented by Go;
   the other contracts define the wider domain vocabulary.
@@ -78,11 +87,13 @@ application side, coupled through versioned Protobuf contracts:
 - `OnboardEntity` generates holder and wallet UUIDs once per call and reuses
   them for all retry attempts. Provisioning occurs before the local database
   transaction; do not hold a Ruby database transaction across the Twirp call.
-- Ruby uses `# typed: strict` for app code and Sorbet signatures. Generated
-  protobuf constants are runtime descriptor-pool assignments, so use
+- All Ruby files must declare `# typed: strict`, except RSpec tests and database
+  migrations. Generated protobuf constants are runtime descriptor-pool
+  assignments, so use
   `T.untyped`/`T.unsafe` only at the generated-code boundary as existing code
   does. Do not add `T::Generic` to Sequel model source classes; the custom
   Tapioca compiler supplies the static-only generic declarations.
+- Run `bundle exec rubocop` for Ruby changes.
 - When a schema change affects a Sequel model, regenerate the committed
   `ruby/sorbet/rbi/dsl/models/` RBIs after migrating the database. Tapioca is
   configured with one worker because it loads a live Postgres connection.

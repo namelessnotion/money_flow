@@ -2,18 +2,32 @@
 # typed: strict
 
 require_relative 'objects/base_object'
+require_relative 'objects/entity'
 
 module Types
-  # Placeholder root Query type. GraphQL schemas require a query root to be
-  # valid even before there's anything real to query — replace `ok` with
-  # real fields as read models come online.
+  # Root Query type.
   class QueryType < BaseObject
     field :ok, Boolean, null: false, resolver_method: :ok?,
                         description: 'Health check placeholder until real queries exist.'
 
+    field :entities, Types::Entity.connection_type, null: false,
+                                                    default_page_size: 100, max_page_size: 100,
+                                                    extras: [:lookahead],
+                                                    description: 'Onboarded entities, paginated at 100 per page.'
+
     sig { returns(T::Boolean) }
     def ok?
       true
+    end
+
+    # `Models::Entity::PrivateDataset` is a Sorbet-only fiction (see
+    # `Types::Entity.scope`) so this uses `T::Sig::WithoutRuntime.sig` rather
+    # than a normal `sig`, which would try to resolve the constant at runtime.
+    T::Sig::WithoutRuntime.sig do
+      params(lookahead: GraphQL::Execution::Lookahead).returns(Models::Entity::PrivateDataset)
+    end
+    def entities(lookahead:)
+      Types::Entity.scope(lookahead, Models::Entity.dataset.order(:id))
     end
   end
 end
