@@ -38,6 +38,7 @@ services:
       DATABASE_URL: postgres://money_flow:money_flow@postgres:5432/money_flow_dev?sslmode=disable
       DB_HOST: postgres
       CORS_ALLOWED_ORIGIN: https://app.local.namelessnotion.com
+      HOLDER_SERVICE_URL: http://go:8080/twirp
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { useQuery } from '@vue/apollo-composable'
 import { computed } from 'vue'
-import { ENTITIES_QUERY, type EntitiesQueryResult, type EntitiesQueryVariables } from '../graphql/entities'
-
-const PAGE_SIZE = 20
+import { ENTITIES_QUERY, PAGE_SIZE, type EntitiesQueryResult, type EntitiesQueryVariables } from '../graphql/entities'
 
 const { result, loading, error, fetchMore } = useQuery<EntitiesQueryResult, EntitiesQueryVariables>(
   ENTITIES_QUERY,

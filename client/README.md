@@ -20,3 +20,9 @@ npm run dev
 Vite proxies `/graphql` to `http://localhost:9292` by default. Set
 `VITE_RUBY_SERVER_URL` to change the development proxy target, or
 `VITE_GRAPHQL_URL` to make Apollo Client use an explicit GraphQL URL.
+
+Run tests with:
+
+```sh
+npm test
+```

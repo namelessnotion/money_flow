@@ -1,6 +1,6 @@
 import vue from "@vitejs/plugin-vue";
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
 // Set when running behind the docker/proxy nginx container, which serves the
 // dev server under a different hostname (and, over HTTPS on 443, a different
@@ -23,5 +23,9 @@ export default defineConfig({
       },
     },
     hmr: devHost ? { host: devHost, protocol: "wss", clientPort: 443 } : undefined,
+  },
+  test: {
+    environment: "jsdom",
+    include: ["src/**/*.spec.ts"],
   },
 });
