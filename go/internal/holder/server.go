@@ -10,6 +10,7 @@ import (
 
 	pb "github.com/namelessnotion/money_flow/go/gen/proto/holder/v1"
 	"github.com/namelessnotion/money_flow/go/internal/eventstore"
+	"github.com/namelessnotion/money_flow/go/internal/id"
 	"github.com/namelessnotion/money_flow/go/internal/wallet"
 )
 
@@ -35,8 +36,8 @@ func NewServer(store eventstore.Store) *Server {
 // (Ruby's OnboardEntity does, before it ever calls here), so a retry after an
 // ambiguous failure has to converge on one Holder rather than conflict.
 func (s *Server) Establish(ctx context.Context, req *pb.EstablishRequest) (*pb.EstablishResponse, error) {
-	if req.GetId() == "" {
-		return nil, twirp.RequiredArgumentError("id")
+	if err := id.Validate("id", req.GetId()); err != nil {
+		return nil, err
 	}
 
 	existing, err := s.established(ctx, req.GetId())
@@ -75,10 +76,10 @@ func (s *Server) Establish(ctx context.Context, req *pb.EstablishRequest) (*pb.E
 // Both events land in a single atomic append, so a Holder can never reference a
 // Wallet whose own stream was never written. Idempotent per wallet_id.
 func (s *Server) AddWallet(ctx context.Context, req *pb.AddWalletRequest) (*pb.AddWalletResponse, error) {
-	if req.GetId() == "" {
-		return nil, twirp.RequiredArgumentError("id")
+	if err := id.Validate("id", req.GetId()); err != nil {
+		return nil, err
 	}
-	if err := wallet.ValidateOpen(req.GetWalletId(), req.GetId(), req.GetAllows()); err != nil {
+	if err := wallet.ValidateWallet(req.GetWalletId(), req.GetAllows()); err != nil {
 		return nil, err
 	}
 
@@ -129,8 +130,8 @@ func (s *Server) AddWallet(ctx context.Context, req *pb.AddWalletRequest) (*pb.A
 // UNIQUE constraint at INSERT time, so a writer landing in between turns into a
 // conflict rather than a lost write.
 func (s *Server) Provision(ctx context.Context, req *pb.ProvisionRequest) (*pb.ProvisionResponse, error) {
-	if req.GetId() == "" {
-		return nil, twirp.RequiredArgumentError("id")
+	if err := id.Validate("id", req.GetId()); err != nil {
+		return nil, err
 	}
 	if len(req.GetWallets()) == 0 {
 		return nil, twirp.RequiredArgumentError("wallets")
@@ -138,7 +139,7 @@ func (s *Server) Provision(ctx context.Context, req *pb.ProvisionRequest) (*pb.P
 
 	seen := make(map[string]struct{}, len(req.GetWallets()))
 	for _, spec := range req.GetWallets() {
-		if err := wallet.ValidateOpen(spec.GetWalletId(), req.GetId(), spec.GetAllows()); err != nil {
+		if err := wallet.ValidateWallet(spec.GetWalletId(), spec.GetAllows()); err != nil {
 			return nil, err
 		}
 		if _, dup := seen[spec.GetWalletId()]; dup {

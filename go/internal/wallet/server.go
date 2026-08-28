@@ -10,6 +10,7 @@ import (
 	sharedpb "github.com/namelessnotion/money_flow/go/gen/proto/shared/v1"
 	pb "github.com/namelessnotion/money_flow/go/gen/proto/wallet/v1"
 	"github.com/namelessnotion/money_flow/go/internal/eventstore"
+	"github.com/namelessnotion/money_flow/go/internal/id"
 )
 
 // AggregateType is this aggregate's stream namespace in the event log.
@@ -35,14 +36,14 @@ func OpenedEvent(walletID, holderID, name string, allows sharedpb.Allows) *pb.Wa
 	return &pb.WalletOpened{Id: walletID, HolderId: holderID, Name: name, Allows: allows}
 }
 
-// ValidateOpen checks what every caller must check before a Wallet is opened,
-// whether it arrives through Open or as part of provisioning a Holder.
-func ValidateOpen(walletID, holderID string, allows sharedpb.Allows) error {
-	if walletID == "" {
-		return twirp.RequiredArgumentError("id")
-	}
-	if holderID == "" {
-		return twirp.RequiredArgumentError("holder_id")
+// ValidateWallet checks what every caller must check about a Wallet's own id
+// and access policy, independent of whose Holder it belongs to. Split out
+// from ValidateOpen so AddWallet and Provision — which already validate the
+// holder id themselves, against their own request's "id" field — don't also
+// re-validate it here under the name "holder_id" for every Wallet.
+func ValidateWallet(walletID string, allows sharedpb.Allows) error {
+	if err := id.Validate("id", walletID); err != nil {
+		return err
 	}
 	// The caller has to state the policy: an unset field is a bug, and
 	// ALLOWS_NONE exists for deliberately permitting neither direction.
@@ -50,6 +51,16 @@ func ValidateOpen(walletID, holderID string, allows sharedpb.Allows) error {
 		return twirp.InvalidArgumentError("allows", "must be set; use ALLOWS_NONE to permit neither onramp nor offramp")
 	}
 	return nil
+}
+
+// ValidateOpen checks what every caller must check before a Wallet is opened.
+// Open is the only caller that hasn't already validated the holder id itself,
+// so it's the only one that needs the composed check.
+func ValidateOpen(walletID, holderID string, allows sharedpb.Allows) error {
+	if err := ValidateWallet(walletID, allows); err != nil {
+		return err
+	}
+	return id.Validate("holder_id", holderID)
 }
 
 // Opened returns the WalletOpened event for id, or nil when the Wallet does not

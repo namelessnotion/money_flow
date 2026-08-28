@@ -62,7 +62,7 @@ func (s *PostgresStore) AppendAtomic(ctx context.Context, writes ...StreamWrite)
 			}
 			batch.Queue(
 				`INSERT INTO events (aggregate_type, aggregate_id, sequence, event_type, payload)
-				 VALUES ($1, $2, $3, $4, $5)`,
+				 VALUES ($1, $2::uuid, $3, $4, $5)`,
 				w.AggregateType, w.AggregateID, w.ExpectedSeq+int64(i)+1, EventType(evt), payload,
 			)
 			rows++
@@ -100,7 +100,7 @@ func (s *PostgresStore) Load(ctx context.Context, aggregateType, aggregateID str
 	rows, err := s.pool.Query(ctx,
 		`SELECT global_seq, aggregate_type, aggregate_id, sequence, event_type, payload, occurred_at
 		 FROM events
-		 WHERE aggregate_type = $1 AND aggregate_id = $2
+		 WHERE aggregate_type = $1 AND aggregate_id = $2::uuid
 		 ORDER BY sequence ASC`,
 		aggregateType, aggregateID,
 	)

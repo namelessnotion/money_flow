@@ -12,6 +12,7 @@ import (
 	sharedpb "github.com/namelessnotion/money_flow/go/gen/proto/shared/v1"
 	walletpb "github.com/namelessnotion/money_flow/go/gen/proto/wallet/v1"
 	"github.com/namelessnotion/money_flow/go/internal/eventstore"
+	"github.com/namelessnotion/money_flow/go/internal/testutil"
 	"github.com/namelessnotion/money_flow/go/internal/wallet"
 )
 
@@ -23,7 +24,7 @@ func TestEstablishRecordsHolderEstablished(t *testing.T) {
 	ctx := context.Background()
 
 	req := &pb.EstablishRequest{
-		Id:    "h1",
+		Id:    testutil.ID("h1"),
 		Memos: map[string]*pb.Memo{"why": {Id: "m1", Value: "onboarding"}},
 	}
 
@@ -32,15 +33,15 @@ func TestEstablishRecordsHolderEstablished(t *testing.T) {
 		t.Fatalf("Establish() error = %v", err)
 	}
 
-	if resp.GetId() != "h1" {
-		t.Errorf("response Id = %q, want %q", resp.GetId(), "h1")
+	if resp.GetId() != testutil.ID("h1") {
+		t.Errorf("response Id = %q, want %q", resp.GetId(), testutil.ID("h1"))
 	}
 	established := resp.GetHolderEstablished()
 	if established == nil {
 		t.Fatal("response result = nil, want HolderEstablished")
 	}
-	if established.GetId() != "h1" {
-		t.Errorf("HolderEstablished.Id = %q, want %q", established.GetId(), "h1")
+	if established.GetId() != testutil.ID("h1") {
+		t.Errorf("HolderEstablished.Id = %q, want %q", established.GetId(), testutil.ID("h1"))
 	}
 	// The memos on the command have to survive onto the event, or the reason a
 	// Holder was established is lost the moment the request goes out of scope.
@@ -49,7 +50,7 @@ func TestEstablishRecordsHolderEstablished(t *testing.T) {
 	}
 
 	// The event must actually be in the log, not merely echoed back.
-	events, err := store.Load(ctx, "holder", "h1")
+	events, err := store.Load(ctx, "holder", testutil.ID("h1"))
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
@@ -89,6 +90,27 @@ func TestEstablishRequiresID(t *testing.T) {
 	}
 }
 
+// A non-empty id that isn't UUID-shaped must be reported as invalid, not
+// silently accepted just because it's non-empty.
+func TestEstablishRejectsAMalformedID(t *testing.T) {
+	t.Parallel()
+
+	server := NewServer(eventstore.NewMemoryStore())
+
+	_, err := server.Establish(context.Background(), &pb.EstablishRequest{Id: "not-a-uuid"})
+	if err == nil {
+		t.Fatal("Establish() with malformed id error = nil, want an error")
+	}
+
+	var twerr twirp.Error
+	if !errors.As(err, &twerr) {
+		t.Fatalf("Establish() error = %T, want twirp.Error", err)
+	}
+	if twerr.Code() != twirp.InvalidArgument {
+		t.Errorf("error code = %q, want %q", twerr.Code(), twirp.InvalidArgument)
+	}
+}
+
 // Callers own the Holder id and retry after ambiguous failures, so establishing
 // twice has to converge on one Holder rather than erroring or double-recording.
 func TestEstablishIsIdempotent(t *testing.T) {
@@ -98,7 +120,7 @@ func TestEstablishIsIdempotent(t *testing.T) {
 	server := NewServer(store)
 	ctx := context.Background()
 
-	req := &pb.EstablishRequest{Id: "h1", Memos: map[string]*pb.Memo{"why": {Id: "m1", Value: "first"}}}
+	req := &pb.EstablishRequest{Id: testutil.ID("h1"), Memos: map[string]*pb.Memo{"why": {Id: "m1", Value: "first"}}}
 
 	first, err := server.Establish(ctx, req)
 	if err != nil {
@@ -114,7 +136,7 @@ func TestEstablishIsIdempotent(t *testing.T) {
 		t.Errorf("second Establish() = %v, want identical to first %v", second, first)
 	}
 
-	events, err := store.Load(ctx, "holder", "h1")
+	events, err := store.Load(ctx, "holder", testutil.ID("h1"))
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
@@ -133,14 +155,14 @@ func TestEstablishIgnoresChangedMemosOnReplay(t *testing.T) {
 	ctx := context.Background()
 
 	if _, err := server.Establish(ctx, &pb.EstablishRequest{
-		Id:    "h1",
+		Id:    testutil.ID("h1"),
 		Memos: map[string]*pb.Memo{"why": {Id: "m1", Value: "original"}},
 	}); err != nil {
 		t.Fatalf("first Establish() error = %v", err)
 	}
 
 	resp, err := server.Establish(ctx, &pb.EstablishRequest{
-		Id:    "h1",
+		Id:    testutil.ID("h1"),
 		Memos: map[string]*pb.Memo{"why": {Id: "m1", Value: "changed"}},
 	})
 	if err != nil {
@@ -162,15 +184,15 @@ func TestEstablishResolvesConcurrencyConflict(t *testing.T) {
 
 	// Simulate losing the race: the event is already in the log by the time
 	// this server's Append runs.
-	winner := &pb.HolderEstablished{Id: "h1", Memos: map[string]*pb.Memo{"why": {Id: "m1", Value: "winner"}}}
+	winner := &pb.HolderEstablished{Id: testutil.ID("h1"), Memos: map[string]*pb.Memo{"why": {Id: "m1", Value: "winner"}}}
 	server := NewServer(&conflictOnceStore{Store: store, onConflict: func() {
-		if err := store.Append(ctx, "holder", "h1", 0, winner); err != nil {
+		if err := store.Append(ctx, "holder", testutil.ID("h1"), 0, winner); err != nil {
 			t.Errorf("seeding winner: %v", err)
 		}
 	}})
 
 	resp, err := server.Establish(ctx, &pb.EstablishRequest{
-		Id:    "h1",
+		Id:    testutil.ID("h1"),
 		Memos: map[string]*pb.Memo{"why": {Id: "m2", Value: "loser"}},
 	})
 	if err != nil {
@@ -190,12 +212,12 @@ func TestEstablishRejectsStreamNotStartingWithHolderEstablished(t *testing.T) {
 	store := eventstore.NewMemoryStore()
 	ctx := context.Background()
 
-	if err := store.Append(ctx, "holder", "h1", 0, &pb.HolderAddedWallet{Id: "h1", WalletId: "w1"}); err != nil {
+	if err := store.Append(ctx, "holder", testutil.ID("h1"), 0, &pb.HolderAddedWallet{Id: testutil.ID("h1"), WalletId: testutil.ID("w1")}); err != nil {
 		t.Fatalf("seeding stream: %v", err)
 	}
 
 	server := NewServer(store)
-	_, err := server.Establish(ctx, &pb.EstablishRequest{Id: "h1"})
+	_, err := server.Establish(ctx, &pb.EstablishRequest{Id: testutil.ID("h1")})
 	if err == nil {
 		t.Fatal("Establish() error = nil, want a refusal for a malformed stream")
 	}
@@ -208,7 +230,7 @@ func TestEstablishRejectsStreamNotStartingWithHolderEstablished(t *testing.T) {
 		t.Errorf("error code = %q, want %q", twerr.Code(), twirp.Internal)
 	}
 
-	events, err := store.Load(ctx, "holder", "h1")
+	events, err := store.Load(ctx, "holder", testutil.ID("h1"))
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
@@ -223,7 +245,7 @@ func TestEstablishSurfacesStoreFailure(t *testing.T) {
 	boom := errors.New("database is on fire")
 	server := NewServer(&failingStore{err: boom})
 
-	_, err := server.Establish(context.Background(), &pb.EstablishRequest{Id: "h1"})
+	_, err := server.Establish(context.Background(), &pb.EstablishRequest{Id: testutil.ID("h1")})
 	if err == nil {
 		t.Fatal("Establish() error = nil, want the store failure surfaced")
 	}
@@ -241,11 +263,11 @@ func TestEstablishSurfacesStoreFailure(t *testing.T) {
 // sends (one Wallet per account type).
 func provisionRequest() *pb.ProvisionRequest {
 	return &pb.ProvisionRequest{
-		Id: "h1",
+		Id: testutil.ID("h1"),
 		Wallets: []*pb.WalletSpec{
-			{WalletId: "w-bank", Name: "bank", Allows: sharedpb.Allows_ALLOWS_ONRAMP_AND_OFFRAMP},
-			{WalletId: "w-debit", Name: "debit_card", Allows: sharedpb.Allows_ALLOWS_ONRAMP},
-			{WalletId: "w-cash", Name: "cash", Allows: sharedpb.Allows_ALLOWS_NONE},
+			{WalletId: testutil.ID("w-bank"), Name: "bank", Allows: sharedpb.Allows_ALLOWS_ONRAMP_AND_OFFRAMP},
+			{WalletId: testutil.ID("w-debit"), Name: "debit_card", Allows: sharedpb.Allows_ALLOWS_ONRAMP},
+			{WalletId: testutil.ID("w-cash"), Name: "cash", Allows: sharedpb.Allows_ALLOWS_NONE},
 		},
 	}
 }
@@ -270,7 +292,7 @@ func TestProvisionWritesHolderAndEveryWallet(t *testing.T) {
 	}
 
 	// The Holder's stream: HolderEstablished then one HolderAddedWallet each.
-	holderEvents, err := store.Load(ctx, aggregateType, "h1")
+	holderEvents, err := store.Load(ctx, aggregateType, testutil.ID("h1"))
 	if err != nil {
 		t.Fatalf("Load(holder) error = %v", err)
 	}
@@ -303,7 +325,7 @@ func TestProvisionWritesHolderAndEveryWallet(t *testing.T) {
 		if !ok {
 			t.Fatalf("wallet %s recorded %T, want *WalletOpened", spec.GetWalletId(), msg)
 		}
-		if opened.GetHolderId() != "h1" || opened.GetName() != spec.GetName() {
+		if opened.GetHolderId() != testutil.ID("h1") || opened.GetName() != spec.GetName() {
 			t.Errorf("WalletOpened = (holder %q, name %q), want (h1, %q)",
 				opened.GetHolderId(), opened.GetName(), spec.GetName())
 		}
@@ -330,8 +352,8 @@ func TestProvisionIsAllOrNothing(t *testing.T) {
 
 	// Nothing may have been written to any stream.
 	for _, tc := range []struct{ aggType, id string }{
-		{aggregateType, "h1"}, {wallet.AggregateType, "w-bank"},
-		{wallet.AggregateType, "w-debit"}, {wallet.AggregateType, "w-cash"},
+		{aggregateType, testutil.ID("h1")}, {wallet.AggregateType, testutil.ID("w-bank")},
+		{wallet.AggregateType, testutil.ID("w-debit")}, {wallet.AggregateType, testutil.ID("w-cash")},
 	} {
 		events, err := store.Load(ctx, tc.aggType, tc.id)
 		if err != nil {
@@ -362,7 +384,7 @@ func TestProvisionIsIdempotent(t *testing.T) {
 		t.Errorf("second Provision() = %v, want identical to first %v", second, first)
 	}
 
-	holderEvents, _ := store.Load(ctx, aggregateType, "h1")
+	holderEvents, _ := store.Load(ctx, aggregateType, testutil.ID("h1"))
 	if len(holderEvents) != 4 {
 		t.Errorf("holder stream holds %d events, want 4 — re-provisioning must append nothing", len(holderEvents))
 	}
@@ -384,11 +406,11 @@ func TestProvisionConvergesOnPartialState(t *testing.T) {
 	ctx := context.Background()
 
 	// The Holder and one of its Wallets already exist.
-	if _, err := server.Establish(ctx, &pb.EstablishRequest{Id: "h1"}); err != nil {
+	if _, err := server.Establish(ctx, &pb.EstablishRequest{Id: testutil.ID("h1")}); err != nil {
 		t.Fatalf("Establish() error = %v", err)
 	}
-	if err := store.Append(ctx, wallet.AggregateType, "w-bank", 0,
-		wallet.OpenedEvent("w-bank", "h1", "bank", sharedpb.Allows_ALLOWS_ONRAMP_AND_OFFRAMP),
+	if err := store.Append(ctx, wallet.AggregateType, testutil.ID("w-bank"), 0,
+		wallet.OpenedEvent(testutil.ID("w-bank"), testutil.ID("h1"), "bank", sharedpb.Allows_ALLOWS_ONRAMP_AND_OFFRAMP),
 	); err != nil {
 		t.Fatalf("seeding wallet: %v", err)
 	}
@@ -397,7 +419,7 @@ func TestProvisionConvergesOnPartialState(t *testing.T) {
 		t.Fatalf("Provision() error = %v", err)
 	}
 
-	holderEvents, _ := store.Load(ctx, aggregateType, "h1")
+	holderEvents, _ := store.Load(ctx, aggregateType, testutil.ID("h1"))
 	if len(holderEvents) != 4 {
 		t.Errorf("holder stream holds %d events, want 4", len(holderEvents))
 	}
@@ -418,11 +440,15 @@ func TestProvisionValidatesRequest(t *testing.T) {
 		req  *pb.ProvisionRequest
 	}{
 		{"missing id", &pb.ProvisionRequest{Wallets: provisionRequest().GetWallets()}},
-		{"no wallets", &pb.ProvisionRequest{Id: "h1"}},
-		{"wallet without allows", &pb.ProvisionRequest{Id: "h1", Wallets: []*pb.WalletSpec{{WalletId: "w1"}}}},
-		{"duplicate wallet id", &pb.ProvisionRequest{Id: "h1", Wallets: []*pb.WalletSpec{
-			{WalletId: "w1", Allows: sharedpb.Allows_ALLOWS_NONE},
-			{WalletId: "w1", Allows: sharedpb.Allows_ALLOWS_NONE},
+		{"malformed id", &pb.ProvisionRequest{Id: "not-a-uuid", Wallets: provisionRequest().GetWallets()}},
+		{"no wallets", &pb.ProvisionRequest{Id: testutil.ID("h1")}},
+		{"wallet without allows", &pb.ProvisionRequest{Id: testutil.ID("h1"), Wallets: []*pb.WalletSpec{{WalletId: testutil.ID("w1")}}}},
+		{"malformed wallet id", &pb.ProvisionRequest{Id: testutil.ID("h1"), Wallets: []*pb.WalletSpec{
+			{WalletId: "not-a-uuid", Allows: sharedpb.Allows_ALLOWS_NONE},
+		}}},
+		{"duplicate wallet id", &pb.ProvisionRequest{Id: testutil.ID("h1"), Wallets: []*pb.WalletSpec{
+			{WalletId: testutil.ID("w1"), Allows: sharedpb.Allows_ALLOWS_NONE},
+			{WalletId: testutil.ID("w1"), Allows: sharedpb.Allows_ALLOWS_NONE},
 		}}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -448,8 +474,8 @@ func TestProvisionRejectsWalletOwnedByAnotherHolder(t *testing.T) {
 	store := eventstore.NewMemoryStore()
 	ctx := context.Background()
 
-	if err := store.Append(ctx, wallet.AggregateType, "w-bank", 0,
-		wallet.OpenedEvent("w-bank", "someone-else", "bank", sharedpb.Allows_ALLOWS_ONRAMP),
+	if err := store.Append(ctx, wallet.AggregateType, testutil.ID("w-bank"), 0,
+		wallet.OpenedEvent(testutil.ID("w-bank"), testutil.ID("someone-else"), "bank", sharedpb.Allows_ALLOWS_ONRAMP),
 	); err != nil {
 		t.Fatalf("seeding wallet: %v", err)
 	}
@@ -463,7 +489,7 @@ func TestProvisionRejectsWalletOwnedByAnotherHolder(t *testing.T) {
 	}
 
 	// The rejected request must not have written anything.
-	holderEvents, _ := store.Load(ctx, aggregateType, "h1")
+	holderEvents, _ := store.Load(ctx, aggregateType, testutil.ID("h1"))
 	if len(holderEvents) != 0 {
 		t.Errorf("holder stream holds %d events, want 0", len(holderEvents))
 	}
@@ -476,12 +502,12 @@ func TestAddWalletOpensAndRecordsTheWallet(t *testing.T) {
 	server := NewServer(store)
 	ctx := context.Background()
 
-	if _, err := server.Establish(ctx, &pb.EstablishRequest{Id: "h1"}); err != nil {
+	if _, err := server.Establish(ctx, &pb.EstablishRequest{Id: testutil.ID("h1")}); err != nil {
 		t.Fatalf("Establish() error = %v", err)
 	}
 
 	resp, err := server.AddWallet(ctx, &pb.AddWalletRequest{
-		Id: "h1", WalletId: "w1", Name: "bank", Allows: sharedpb.Allows_ALLOWS_ONRAMP,
+		Id: testutil.ID("h1"), WalletId: testutil.ID("w1"), Name: "bank", Allows: sharedpb.Allows_ALLOWS_ONRAMP,
 	})
 	if err != nil {
 		t.Fatalf("AddWallet() error = %v", err)
@@ -490,11 +516,11 @@ func TestAddWalletOpensAndRecordsTheWallet(t *testing.T) {
 		t.Fatal("response result = nil, want HolderAddedWallet")
 	}
 
-	holderEvents, _ := store.Load(ctx, aggregateType, "h1")
+	holderEvents, _ := store.Load(ctx, aggregateType, testutil.ID("h1"))
 	if len(holderEvents) != 2 {
 		t.Errorf("holder stream holds %d events, want 2", len(holderEvents))
 	}
-	walletEvents, _ := store.Load(ctx, wallet.AggregateType, "w1")
+	walletEvents, _ := store.Load(ctx, wallet.AggregateType, testutil.ID("w1"))
 	if len(walletEvents) != 1 {
 		t.Errorf("wallet stream holds %d events, want 1", len(walletEvents))
 	}
@@ -506,7 +532,7 @@ func TestAddWalletRequiresAnEstablishedHolder(t *testing.T) {
 	server := NewServer(eventstore.NewMemoryStore())
 
 	_, err := server.AddWallet(context.Background(), &pb.AddWalletRequest{
-		Id: "nope", WalletId: "w1", Allows: sharedpb.Allows_ALLOWS_NONE,
+		Id: testutil.ID("nope"), WalletId: testutil.ID("w1"), Allows: sharedpb.Allows_ALLOWS_NONE,
 	})
 	if err == nil {
 		t.Fatal("AddWallet() error = nil, want a rejection for an unknown holder")
@@ -514,6 +540,38 @@ func TestAddWalletRequiresAnEstablishedHolder(t *testing.T) {
 	var twerr twirp.Error
 	if !errors.As(err, &twerr) || twerr.Code() != twirp.FailedPrecondition {
 		t.Errorf("AddWallet() error = %v, want twirp failed_precondition", err)
+	}
+}
+
+// A non-empty id or wallet_id that isn't UUID-shaped must be reported as
+// invalid before AddWallet ever looks the holder up.
+func TestAddWalletRejectsAMalformedID(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name string
+		req  *pb.AddWalletRequest
+	}{
+		{"malformed id", &pb.AddWalletRequest{
+			Id: "not-a-uuid", WalletId: testutil.ID("w1"), Allows: sharedpb.Allows_ALLOWS_NONE,
+		}},
+		{"malformed wallet_id", &pb.AddWalletRequest{
+			Id: testutil.ID("h1"), WalletId: "not-a-uuid", Allows: sharedpb.Allows_ALLOWS_NONE,
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			server := NewServer(eventstore.NewMemoryStore())
+
+			_, err := server.AddWallet(context.Background(), tc.req)
+			if err == nil {
+				t.Fatal("AddWallet() error = nil, want a rejection")
+			}
+			var twerr twirp.Error
+			if !errors.As(err, &twerr) || twerr.Code() != twirp.InvalidArgument {
+				t.Errorf("AddWallet() error = %v, want twirp invalid_argument", err)
+			}
+		})
 	}
 }
 

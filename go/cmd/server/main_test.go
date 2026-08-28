@@ -10,6 +10,7 @@ import (
 	sharedpb "github.com/namelessnotion/money_flow/go/gen/proto/shared/v1"
 	walletpb "github.com/namelessnotion/money_flow/go/gen/proto/wallet/v1"
 	"github.com/namelessnotion/money_flow/go/internal/eventstore"
+	"github.com/namelessnotion/money_flow/go/internal/testutil"
 )
 
 type okPinger struct{}
@@ -34,10 +35,10 @@ func TestHolderServiceOverHTTP(t *testing.T) {
 	client := holderpb.NewHolderServiceProtobufClient(srv.URL, srv.Client())
 
 	resp, err := client.Provision(context.Background(), &holderpb.ProvisionRequest{
-		Id: "h1",
+		Id: testutil.ID("h1"),
 		Wallets: []*holderpb.WalletSpec{
-			{WalletId: "w1", Name: "bank", Allows: sharedpb.Allows_ALLOWS_ONRAMP_AND_OFFRAMP},
-			{WalletId: "w2", Name: "cash", Allows: sharedpb.Allows_ALLOWS_NONE},
+			{WalletId: testutil.ID("w1"), Name: "bank", Allows: sharedpb.Allows_ALLOWS_ONRAMP_AND_OFFRAMP},
+			{WalletId: testutil.ID("w2"), Name: "cash", Allows: sharedpb.Allows_ALLOWS_NONE},
 		},
 	})
 	if err != nil {
@@ -48,8 +49,8 @@ func TestHolderServiceOverHTTP(t *testing.T) {
 	}
 	// Enum values must survive the round trip; a mis-encoded enum would come
 	// back as UNSPECIFIED without any transport error.
-	if resp.GetId() != "h1" {
-		t.Errorf("response Id = %q, want h1", resp.GetId())
+	if resp.GetId() != testutil.ID("h1") {
+		t.Errorf("response Id = %q, want %s", resp.GetId(), testutil.ID("h1"))
 	}
 }
 
@@ -60,7 +61,7 @@ func TestWalletServiceOverHTTP(t *testing.T) {
 	client := walletpb.NewWalletServiceProtobufClient(srv.URL, srv.Client())
 
 	resp, err := client.Open(context.Background(), &walletpb.OpenRequest{
-		Id: "w1", HolderId: "h1", Name: "bank", Allows: sharedpb.Allows_ALLOWS_OFFRAMP,
+		Id: testutil.ID("w1"), HolderId: testutil.ID("h1"), Name: "bank", Allows: sharedpb.Allows_ALLOWS_OFFRAMP,
 	})
 	if err != nil {
 		t.Fatalf("Open() over HTTP error = %v", err)

@@ -11,12 +11,13 @@ import (
 	sharedpb "github.com/namelessnotion/money_flow/go/gen/proto/shared/v1"
 	pb "github.com/namelessnotion/money_flow/go/gen/proto/wallet/v1"
 	"github.com/namelessnotion/money_flow/go/internal/eventstore"
+	"github.com/namelessnotion/money_flow/go/internal/testutil"
 )
 
 func openRequest() *pb.OpenRequest {
 	return &pb.OpenRequest{
-		Id:       "w1",
-		HolderId: "h1",
+		Id:       testutil.ID("w1"),
+		HolderId: testutil.ID("h1"),
 		Name:     "bank",
 		Allows:   sharedpb.Allows_ALLOWS_ONRAMP_AND_OFFRAMP,
 	}
@@ -38,15 +39,16 @@ func TestOpenRecordsWalletOpened(t *testing.T) {
 	if opened == nil {
 		t.Fatal("response result = nil, want WalletOpened")
 	}
-	if opened.GetId() != "w1" || opened.GetHolderId() != "h1" {
-		t.Errorf("WalletOpened = (%q, %q), want (w1, h1)", opened.GetId(), opened.GetHolderId())
+	if opened.GetId() != testutil.ID("w1") || opened.GetHolderId() != testutil.ID("h1") {
+		t.Errorf("WalletOpened = (%q, %q), want (%s, %s)",
+			opened.GetId(), opened.GetHolderId(), testutil.ID("w1"), testutil.ID("h1"))
 	}
 	if opened.GetAllows() != sharedpb.Allows_ALLOWS_ONRAMP_AND_OFFRAMP {
 		t.Errorf("WalletOpened.Allows = %v, want ONRAMP_AND_OFFRAMP", opened.GetAllows())
 	}
 
 	// The event must actually be in the log, not merely echoed back.
-	events, err := store.Load(ctx, AggregateType, "w1")
+	events, err := store.Load(ctx, AggregateType, testutil.ID("w1"))
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
@@ -73,11 +75,17 @@ func TestOpenValidatesRequest(t *testing.T) {
 		name string
 		req  *pb.OpenRequest
 	}{
-		{"missing id", &pb.OpenRequest{HolderId: "h1", Allows: sharedpb.Allows_ALLOWS_NONE}},
-		{"missing holder_id", &pb.OpenRequest{Id: "w1", Allows: sharedpb.Allows_ALLOWS_NONE}},
+		{"missing id", &pb.OpenRequest{HolderId: testutil.ID("h1"), Allows: sharedpb.Allows_ALLOWS_NONE}},
+		{"missing holder_id", &pb.OpenRequest{Id: testutil.ID("w1"), Allows: sharedpb.Allows_ALLOWS_NONE}},
+		{"malformed id", &pb.OpenRequest{
+			Id: "not-a-uuid", HolderId: testutil.ID("h1"), Allows: sharedpb.Allows_ALLOWS_NONE,
+		}},
+		{"malformed holder_id", &pb.OpenRequest{
+			Id: testutil.ID("w1"), HolderId: "not-a-uuid", Allows: sharedpb.Allows_ALLOWS_NONE,
+		}},
 		// Unset allows is a bug, not a default — ALLOWS_NONE exists for
 		// deliberately permitting neither direction.
-		{"unspecified allows", &pb.OpenRequest{Id: "w1", HolderId: "h1"}},
+		{"unspecified allows", &pb.OpenRequest{Id: testutil.ID("w1"), HolderId: testutil.ID("h1")}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -93,6 +101,37 @@ func TestOpenValidatesRequest(t *testing.T) {
 			}
 			if twerr.Code() != twirp.InvalidArgument {
 				t.Errorf("error code = %q, want %q", twerr.Code(), twirp.InvalidArgument)
+			}
+		})
+	}
+}
+
+// ValidateWallet is the piece of ValidateOpen that AddWallet and Provision
+// reuse once they've already checked the holder id themselves — it must not
+// also require one.
+func TestValidateWalletChecksOnlyWalletIDAndAllows(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name     string
+		walletID string
+		allows   sharedpb.Allows
+		wantErr  bool
+	}{
+		{"valid", testutil.ID("w1"), sharedpb.Allows_ALLOWS_NONE, false},
+		{"missing id", "", sharedpb.Allows_ALLOWS_NONE, true},
+		{"malformed id", "not-a-uuid", sharedpb.Allows_ALLOWS_NONE, true},
+		{"unspecified allows", testutil.ID("w1"), sharedpb.Allows_ALLOWS_UNSPECIFIED, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := ValidateWallet(tc.walletID, tc.allows)
+			if tc.wantErr && err == nil {
+				t.Fatal("ValidateWallet() error = nil, want a rejection")
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("ValidateWallet() error = %v, want nil", err)
 			}
 		})
 	}
@@ -119,7 +158,7 @@ func TestOpenIsIdempotent(t *testing.T) {
 		t.Errorf("second Open() = %v, want identical to first %v", second, first)
 	}
 
-	events, _ := store.Load(ctx, AggregateType, "w1")
+	events, _ := store.Load(ctx, AggregateType, testutil.ID("w1"))
 	if len(events) != 1 {
 		t.Fatalf("log holds %d events, want 1 — reopening must not append again", len(events))
 	}
@@ -165,7 +204,7 @@ func TestOpenRejectsReplayUnderADifferentHolder(t *testing.T) {
 	}
 
 	poached := openRequest()
-	poached.HolderId = "h2"
+	poached.HolderId = testutil.ID("h2")
 
 	resp, err := server.Open(ctx, poached)
 	if err != nil {
@@ -175,8 +214,8 @@ func TestOpenRejectsReplayUnderADifferentHolder(t *testing.T) {
 	if rejected == nil {
 		t.Fatal("response result = nil, want WalletRejected")
 	}
-	if rejected.GetHolderId() != "h2" {
-		t.Errorf("WalletRejected.HolderId = %q, want the requesting holder h2", rejected.GetHolderId())
+	if rejected.GetHolderId() != testutil.ID("h2") {
+		t.Errorf("WalletRejected.HolderId = %q, want the requesting holder %s", rejected.GetHolderId(), testutil.ID("h2"))
 	}
 }
 
@@ -186,9 +225,9 @@ func TestOpenResolvesConcurrencyConflict(t *testing.T) {
 	store := eventstore.NewMemoryStore()
 	ctx := context.Background()
 
-	winner := OpenedEvent("w1", "h1", "winner", sharedpb.Allows_ALLOWS_ONRAMP)
+	winner := OpenedEvent(testutil.ID("w1"), testutil.ID("h1"), "winner", sharedpb.Allows_ALLOWS_ONRAMP)
 	server := NewServer(&conflictOnceStore{Store: store, onConflict: func() {
-		if err := store.Append(ctx, AggregateType, "w1", 0, winner); err != nil {
+		if err := store.Append(ctx, AggregateType, testutil.ID("w1"), 0, winner); err != nil {
 			t.Errorf("seeding winner: %v", err)
 		}
 	}})
@@ -210,7 +249,7 @@ func TestOpenRejectsStreamNotStartingWithWalletOpened(t *testing.T) {
 
 	// A WalletRejected is a real wallet.v1 message, so this exercises the
 	// wrong-type branch rather than a decode failure.
-	if err := store.Append(ctx, AggregateType, "w1", 0, &pb.WalletRejected{Id: "w1"}); err != nil {
+	if err := store.Append(ctx, AggregateType, testutil.ID("w1"), 0, &pb.WalletRejected{Id: testutil.ID("w1")}); err != nil {
 		t.Fatalf("seeding stream: %v", err)
 	}
 
