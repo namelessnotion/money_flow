@@ -1,12 +1,14 @@
+@AGENTS.MD
+
 # Money Flow Project Guidelines
 
 ## Project Structure
 
-- `go/` - Contains the backend system written in Go. An event sourced architecture is used to handle the intent of money flow, backed by Tigger Beatle database to handing the low level accounting at a Token level. Event log is append-only and immutable, stored in PostgreSQL single table. Protobuf is used to define the domain command and event messages as well as the exposed twirp services.
+- `go/` - "financial transaction system" - Contains the backend system written in Go. An event sourced architecture is used to handle the intent of money flow, backed by Tigger Beatle database to handing the low level accounting at a Token level. Event log is append-only and immutable, stored in PostgreSQL single table. Protobuf is used to define the domain command and event messages as well as the exposed twirp services.
 
-- `ruby/` - Contains the business backend system written in Ruby. Exposed via GraphQL, services to handle the business logic of money flow with the `go/` backend. The Ruby backend is responsible for handling the business logic and orchestrating the flow of money between different entities. Sequel is used as the ORM to interact with the PostgreSQL database.
+- `ruby/` - "business backend" - Contains the business backend system written in Ruby. Exposed via GraphQL, services to handle the business logic of money flow with the `go/` backend. The Ruby backend is responsible for handling the business logic and orchestrating the flow of money between different entities. Sequel is used as the ORM to interact with the PostgreSQL database.
 
-- `client/` - Contains the frontend system written in VueJS. The frontend is responsible for providing a user interface for users to interact with the money flow system. It communicates with the Ruby backend via GraphQL to perform various operations related to money flow. VueJS 3 is used along with Apollo Client 4. TailwindCSS is used for styling the frontend components. Apollo Client Composables are used to handle GraphQL queries and mutations in a reactive way and manage the state of the application.
+- `client/` - "business front end" - Contains the frontend system written in VueJS. The frontend is responsible for providing a user interface for users to interact with the money flow system. It communicates with the Ruby backend via GraphQL to perform various operations related to money flow. VueJS 3 is used along with Apollo Client 4. TailwindCSS is used for styling the frontend components. Apollo Client Composables are used to handle GraphQL queries and mutations in a reactive way and manage the state of the application.
 
 - `proto/` - Contains the Protobuf definitions for the domain command and event messages as well as the exposed twirp services. The Protobuf files are used to generate code for both the Go and Ruby backends.
 
@@ -33,3 +35,17 @@ Every new Ruby file should start `# typed: strict`. Only drop to a weaker sigil 
 - - Testing: Vue Test Utils
     Linting/Format: ESLint, Prettier
     LSP: TS Server, Vue Language Server
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked as GitHub issues on `namelessnotion/money_flow` (the `origin` remote); the `gitlab` remote is a mirror, not the tracker. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Multi-context layout: `CONTEXT-MAP.md` at the root, with a `CONTEXT.md` + `docs/adr/` per context (`go/`, `ruby/`, `client/`); `proto/` is the shared published language between `go/` and `ruby/`, not its own context. See `docs/agents/domain.md`.
