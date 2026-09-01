@@ -1,0 +1,91 @@
+package transfer
+
+import (
+	"context"
+	"testing"
+
+	sharedpb "github.com/namelessnotion/money_flow/go/gen/proto/shared/v1"
+	"github.com/namelessnotion/money_flow/go/internal/eventstore"
+	"github.com/namelessnotion/money_flow/go/internal/ledger"
+	"github.com/namelessnotion/money_flow/go/internal/testutil"
+)
+
+// rejectingTransfersClient wraps a real ledger.Client but forces every
+// CreateTransfers call to report a rejection instead of delegating,
+// simulating TigerBeetle refusing a batch we submit — an internal
+// invariant failure, per decision #13, distinct from an external-factor
+// cancellation.
+type rejectingTransfersClient struct {
+	ledger.Client
+}
+
+func (r *rejectingTransfersClient) CreateTransfers(_ context.Context, transfers []ledger.Transfer) ([]ledger.TransferResult, error) {
+	results := make([]ledger.TransferResult, len(transfers))
+	for i := range transfers {
+		results[i] = ledger.TransferResult{Index: i, Result: ledger.TransferResultExceedsCredits}
+	}
+	return results, nil
+}
+
+func TestCommit_TigerBeetleRejectionRoutesToFailedNotCancelled(t *testing.T) {
+	t.Parallel()
+	store := eventstore.NewMemoryStore()
+	lc := ledger.NewFakeClient()
+	openWallet(t, store, testutil.ID("w1"), sharedpb.Allows_ALLOWS_ONRAMP_AND_OFFRAMP)
+	openWallet(t, store, testutil.ID("w2"), sharedpb.Allows_ALLOWS_ONRAMP_AND_OFFRAMP)
+	mintToken(t, store, lc, testutil.ID("w1"), testutil.ID("t1"), usd(1000))
+	fundToken(t, lc, testutil.ID("t1"), 1000)
+
+	// prepare() (minting) uses the real fake client; only the commit-time
+	// CreateTransfers batch gets rejected.
+	server := NewServer(store, &rejectingTransfersClient{Client: lc})
+	ctx := context.Background()
+	if _, err := server.RequestTransfer(ctx, transferRequest(testutil.ID("xfer1"), testutil.ID("w1"), testutil.ID("w2"), usd(400), false)); err != nil {
+		t.Fatalf("RequestTransfer() error = %v", err)
+	}
+
+	events, err := store.Load(ctx, AggregateType, testutil.ID("xfer1"))
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if currentState(events) != stateFailed {
+		t.Fatalf("state = %v, want failed; events = %v", currentState(events), eventTypes(events))
+	}
+
+	legs, err := preparedLegs(events, testutil.ID("xfer1"))
+	if err != nil {
+		t.Fatalf("preparedLegs() error = %v", err)
+	}
+	debitEvents, err := store.Load(ctx, "operation", legs[0].GetDebitOperationId())
+	if err != nil {
+		t.Fatalf("Load(debit operation) error = %v", err)
+	}
+	last := debitEvents[len(debitEvents)-1]
+	if last.EventType != "operation.v1.Failed" {
+		t.Errorf("debit operation's last event = %q, want operation.v1.Failed (not Cancelled)", last.EventType)
+	}
+}
+
+func TestStage_TigerBeetleRejectionRoutesToFailed(t *testing.T) {
+	t.Parallel()
+	store := eventstore.NewMemoryStore()
+	lc := ledger.NewFakeClient()
+	openWallet(t, store, testutil.ID("w1"), sharedpb.Allows_ALLOWS_ONRAMP_AND_OFFRAMP)
+	openWallet(t, store, testutil.ID("w2"), sharedpb.Allows_ALLOWS_ONRAMP_AND_OFFRAMP)
+	mintToken(t, store, lc, testutil.ID("w1"), testutil.ID("t1"), usd(1000))
+	fundToken(t, lc, testutil.ID("t1"), 1000)
+
+	server := NewServer(store, &rejectingTransfersClient{Client: lc})
+	ctx := context.Background()
+	if _, err := server.RequestTransfer(ctx, transferRequest(testutil.ID("xfer1"), testutil.ID("w1"), testutil.ID("w2"), usd(400), true)); err != nil {
+		t.Fatalf("RequestTransfer(stage=true) error = %v", err)
+	}
+
+	events, err := store.Load(ctx, AggregateType, testutil.ID("xfer1"))
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if currentState(events) != stateFailed {
+		t.Fatalf("state = %v, want failed (staging batch itself was rejected)", currentState(events))
+	}
+}

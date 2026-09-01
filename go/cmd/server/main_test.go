@@ -7,9 +7,13 @@ import (
 	"testing"
 
 	holderpb "github.com/namelessnotion/money_flow/go/gen/proto/holder/v1"
+	operationpb "github.com/namelessnotion/money_flow/go/gen/proto/operation/v1"
 	sharedpb "github.com/namelessnotion/money_flow/go/gen/proto/shared/v1"
+	tokenpb "github.com/namelessnotion/money_flow/go/gen/proto/token/v1"
+	transferpb "github.com/namelessnotion/money_flow/go/gen/proto/transfer/v1"
 	walletpb "github.com/namelessnotion/money_flow/go/gen/proto/wallet/v1"
 	"github.com/namelessnotion/money_flow/go/internal/eventstore"
+	"github.com/namelessnotion/money_flow/go/internal/ledger"
 	"github.com/namelessnotion/money_flow/go/internal/testutil"
 )
 
@@ -23,7 +27,7 @@ func (okPinger) Ping(context.Context) error { return nil }
 // exercised.
 func newTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	srv := httptest.NewServer(newMux(eventstore.NewMemoryStore(), okPinger{}))
+	srv := httptest.NewServer(newMux(eventstore.NewMemoryStore(), okPinger{}, ledger.NewFakeClient()))
 	t.Cleanup(srv.Close)
 	return srv
 }
@@ -51,6 +55,115 @@ func TestHolderServiceOverHTTP(t *testing.T) {
 	// back as UNSPECIFIED without any transport error.
 	if resp.GetId() != testutil.ID("h1") {
 		t.Errorf("response Id = %q, want %s", resp.GetId(), testutil.ID("h1"))
+	}
+}
+
+// newTestServerWithLedger is like newTestServer but returns the FakeClient
+// too, so a test can fund a Token directly (there is no HTTP endpoint for
+// that — Tokens only ever gain balance via a Transfer) while still proving
+// the TigerBeetle-backed services are wired correctly end to end.
+func newTestServerWithLedger(t *testing.T) (*httptest.Server, *ledger.FakeClient) {
+	t.Helper()
+	lc := ledger.NewFakeClient()
+	srv := httptest.NewServer(newMux(eventstore.NewMemoryStore(), okPinger{}, lc))
+	t.Cleanup(srv.Close)
+	return srv, lc
+}
+
+func TestTokenServiceOverHTTP(t *testing.T) {
+	t.Parallel()
+
+	srv, _ := newTestServerWithLedger(t)
+	walletClient := walletpb.NewWalletServiceProtobufClient(srv.URL, srv.Client())
+	tokenClient := tokenpb.NewTokenServiceProtobufClient(srv.URL, srv.Client())
+	ctx := context.Background()
+
+	if _, err := walletClient.Open(ctx, &walletpb.OpenRequest{
+		Id: testutil.ID("w1"), HolderId: testutil.ID("h1"), Name: "bank", Allows: sharedpb.Allows_ALLOWS_ONRAMP_AND_OFFRAMP,
+	}); err != nil {
+		t.Fatalf("Open() over HTTP error = %v", err)
+	}
+
+	resp, err := tokenClient.Mint(ctx, &tokenpb.MintRequest{
+		Id: testutil.ID("t1"), WalletId: testutil.ID("w1"), Capacity: &sharedpb.Money{MinorUnits: 1000, Currency: "USD"},
+	})
+	if err != nil {
+		t.Fatalf("Mint() over HTTP error = %v", err)
+	}
+	if resp.GetTokenMinted().GetId() != testutil.ID("t1") {
+		t.Errorf("result = %v, want TokenMinted for %s", resp.GetResult(), testutil.ID("t1"))
+	}
+}
+
+func TestOperationServiceOverHTTP(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestServer(t)
+	client := operationpb.NewOperationServiceProtobufClient(srv.URL, srv.Client())
+
+	resp, err := client.Initiate(context.Background(), &operationpb.InitiateRequest{
+		Id: testutil.ID("op1"), TransferId: testutil.ID("xfer1"),
+		TokenId: testutil.ID("t-src"), CounterpartyTokenId: testutil.ID("t-dst"),
+		Operator: operationpb.Operator_OPERATOR_DEBIT, Amount: &sharedpb.Money{MinorUnits: 500, Currency: "USD"},
+	})
+	if err != nil {
+		t.Fatalf("Initiate() over HTTP error = %v", err)
+	}
+	if resp.GetInitiated().GetId() != testutil.ID("op1") {
+		t.Errorf("result = %v, want Initiated for %s", resp.GetResult(), testutil.ID("op1"))
+	}
+}
+
+func TestTransferServiceOverHTTP(t *testing.T) {
+	t.Parallel()
+
+	srv, lc := newTestServerWithLedger(t)
+	walletClient := walletpb.NewWalletServiceProtobufClient(srv.URL, srv.Client())
+	tokenClient := tokenpb.NewTokenServiceProtobufClient(srv.URL, srv.Client())
+	transferClient := transferpb.NewTransferServiceProtobufClient(srv.URL, srv.Client())
+	ctx := context.Background()
+
+	for _, w := range []string{"w1", "w2"} {
+		if _, err := walletClient.Open(ctx, &walletpb.OpenRequest{
+			Id: testutil.ID(w), HolderId: testutil.ID("h1"), Name: w, Allows: sharedpb.Allows_ALLOWS_ONRAMP_AND_OFFRAMP,
+		}); err != nil {
+			t.Fatalf("Open(%s) over HTTP error = %v", w, err)
+		}
+	}
+	if _, err := tokenClient.Mint(ctx, &tokenpb.MintRequest{
+		Id: testutil.ID("t1"), WalletId: testutil.ID("w1"), Capacity: &sharedpb.Money{MinorUnits: 1000, Currency: "USD"},
+	}); err != nil {
+		t.Fatalf("Mint() over HTTP error = %v", err)
+	}
+	// Fund t1 directly — there's no HTTP endpoint that puts money into a
+	// Token; only a Transfer does, and this test is proving Transfer itself
+	// works.
+	if _, err := lc.CreateAccounts(ctx, []ledger.Account{{ID: testutil.ID("external-source"), Currency: "USD"}}); err != nil {
+		t.Fatalf("create external-source: %v", err)
+	}
+	if _, err := lc.CreateTransfers(ctx, []ledger.Transfer{{
+		ID: testutil.ID("seed-fund"), DebitAccountID: testutil.ID("external-source"), CreditAccountID: testutil.ID("t1"),
+		MinorUnits: 1000, Currency: "USD", Kind: ledger.TransferKindRegular,
+	}}); err != nil {
+		t.Fatalf("fund t1: %v", err)
+	}
+
+	resp, err := transferClient.RequestTransfer(ctx, &transferpb.RequestTransferRequest{
+		Id: testutil.ID("xfer1"), FromWalletId: testutil.ID("w1"), ToWalletId: testutil.ID("w2"),
+		Amount: &sharedpb.Money{MinorUnits: 400, Currency: "USD"},
+	})
+	if err != nil {
+		t.Fatalf("RequestTransfer() over HTTP error = %v", err)
+	}
+	if resp.GetTransferRequestAccepted() == nil {
+		t.Fatalf("result = %v, want TransferRequestAccepted", resp.GetResult())
+	}
+
+	// The saga runs synchronously within RequestTransfer, so by the time the
+	// HTTP response above came back the whole thing — mint, debit, credit —
+	// already committed; confirm via the shared ledger.
+	if balance, _, _ := lc.AccountBalance(ctx, testutil.ID("t1")); balance != 600 {
+		t.Errorf("t1 balance = %d, want 600 (1000 - 400)", balance)
 	}
 }
 

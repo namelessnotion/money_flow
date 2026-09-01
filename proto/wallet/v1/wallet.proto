@@ -4,6 +4,7 @@ package wallet.v1;
 option go_package = "github.com/namelessnotion/money_flow/go/gen/proto/wallet/v1";
 
 import "shared/v1/allows.proto";
+import "shared/v1/money.proto";
 
 message OpenRequest {
   string id = 1;
@@ -31,6 +32,20 @@ message OpenResponse {
     WalletOpened wallet_opened = 2;
     WalletRejected wallet_rejected = 3;
   }
+}
+
+// Recorded on the Wallet's own stream when a Token is minted for it,
+// mirroring how HolderAddedWallet is written by Holder onto its own stream
+// without a dedicated Wallet-side RPC. Not exposed via any RPC — token.Mint
+// writes it into the Wallet's stream in the same atomic append as
+// TokenMinted. This is what lets source-Token selection enumerate a
+// Wallet's Tokens in mint order by folding the Wallet's own stream, instead
+// of scanning every Token stream in the system (the event store has no
+// such scan API, and one wouldn't scale).
+message TokenMintedForWallet {
+  string id = 1; // wallet id
+  string token_id = 2;
+  shared.v1.Money capacity = 3;
 }
 
 service WalletService {

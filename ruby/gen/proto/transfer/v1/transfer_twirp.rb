@@ -9,6 +9,10 @@ module Transfer
       service 'TransferService'
       rpc :RequestTransfer, RequestTransferRequest, RequestTransferResponse, :ruby_method => :request_transfer
       rpc :CancelAcceptedTransfer, CancelAcceptedTransferRequest, CancelAcceptedTransferResponse, :ruby_method => :cancel_accepted_transfer
+      rpc :RequestReversal, RequestReversalRequest, RequestReversalResponse, :ruby_method => :request_reversal
+      rpc :ConfirmStagedTransfer, ConfirmStagedTransferRequest, ConfirmStagedTransferResponse, :ruby_method => :confirm_staged_transfer
+      rpc :CancelStagedTransfer, CancelStagedTransferRequest, CancelStagedTransferResponse, :ruby_method => :cancel_staged_transfer
+      rpc :PostPendingTransfer, PostPendingTransferRequest, PostPendingTransferResponse, :ruby_method => :post_pending_transfer
     end
 
     class TransferServiceClient < ::Twirp::Client

@@ -12,7 +12,7 @@ Run commands from the component directory unless noted otherwise.
 | Apply Go event-store migrations    | `cd go && DATABASE_URL=postgres://money_flow:money_flow@localhost:5432/money_flow_dev?sslmode=disable go run ./cmd/migrate up`   |
 | Roll back the latest Go migration  | `cd go && DATABASE_URL=postgres://money_flow:money_flow@localhost:5432/money_flow_dev?sslmode=disable go run ./cmd/migrate down` |
 | Run the Go server                  | `cd go && DATABASE_URL=postgres://money_flow:money_flow@localhost:5432/money_flow_dev?sslmode=disable go run ./cmd/server`       |
-| Run all Go tests                   | `cd go && go test ./...`                                                                                                         |
+| Run all Go tests                   | `cd go && CGO_LDFLAGS="-Wl,-ld_classic" go test ./...` (see macOS linker note below)                                             |
 | Run one Go package or test         | `cd go && go test ./internal/wallet -run '^TestOpenRecordsWalletOpened$'`                                                        |
 | Apply Ruby migrations              | `cd ruby && DATABASE_URL=postgres://money_flow:money_flow@localhost:5432/money_flow_dev?sslmode=disable bin/migrate up`          |
 | Run the Ruby HTTP server           | `cd ruby && bin/server`                                                                                                          |
@@ -27,6 +27,16 @@ Run commands from the component directory unless noted otherwise.
 `ruby/gen/proto`; edit only `proto/**/*.proto`, then regenerate and commit the
 resulting bindings. It builds the required Go protoc plugins into the ignored
 `go/.tools/` directory. `protoc` must be installed locally.
+
+`go/internal/ledger` links TigerBeetle's prebuilt static library via cgo. On
+macOS with a recent Xcode (the new linker), that library's `.a` isn't
+8-byte-aligned per member, and any Go command that links a Go test or
+executable in or importing that package fails with `ld: 64-bit mach-o member
+... not 8-byte aligned`. This is a packaging issue in the vendored library,
+not application code — work around it by setting
+`CGO_LDFLAGS="-Wl,-ld_classic"` (deprecated but functional) for `go build`/
+`go test`/`go run` invocations that touch `ledger`, e.g.
+`CGO_LDFLAGS="-Wl,-ld_classic" go test ./...`.
 
 Ruby's eager app loading and `tapioca dsl` query the database when Sequel model
 classes are defined, so run Ruby migrations first. The two migration systems

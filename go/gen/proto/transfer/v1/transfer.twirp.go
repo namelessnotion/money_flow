@@ -35,6 +35,14 @@ type TransferService interface {
 	RequestTransfer(context.Context, *RequestTransferRequest) (*RequestTransferResponse, error)
 
 	CancelAcceptedTransfer(context.Context, *CancelAcceptedTransferRequest) (*CancelAcceptedTransferResponse, error)
+
+	RequestReversal(context.Context, *RequestReversalRequest) (*RequestReversalResponse, error)
+
+	ConfirmStagedTransfer(context.Context, *ConfirmStagedTransferRequest) (*ConfirmStagedTransferResponse, error)
+
+	CancelStagedTransfer(context.Context, *CancelStagedTransferRequest) (*CancelStagedTransferResponse, error)
+
+	PostPendingTransfer(context.Context, *PostPendingTransferRequest) (*PostPendingTransferResponse, error)
 }
 
 // ===============================
@@ -43,7 +51,7 @@ type TransferService interface {
 
 type transferServiceProtobufClient struct {
 	client      HTTPClient
-	urls        [2]string
+	urls        [6]string
 	interceptor twirp.Interceptor
 	opts        twirp.ClientOptions
 }
@@ -71,9 +79,13 @@ func NewTransferServiceProtobufClient(baseURL string, client HTTPClient, opts ..
 	// Build method URLs: <baseURL>[<prefix>]/<package>.<Service>/<Method>
 	serviceURL := sanitizeBaseURL(baseURL)
 	serviceURL += baseServicePath(pathPrefix, "transfer.v1", "TransferService")
-	urls := [2]string{
+	urls := [6]string{
 		serviceURL + "RequestTransfer",
 		serviceURL + "CancelAcceptedTransfer",
+		serviceURL + "RequestReversal",
+		serviceURL + "ConfirmStagedTransfer",
+		serviceURL + "CancelStagedTransfer",
+		serviceURL + "PostPendingTransfer",
 	}
 
 	return &transferServiceProtobufClient{
@@ -176,13 +188,197 @@ func (c *transferServiceProtobufClient) callCancelAcceptedTransfer(ctx context.C
 	return out, nil
 }
 
+func (c *transferServiceProtobufClient) RequestReversal(ctx context.Context, in *RequestReversalRequest) (*RequestReversalResponse, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "transfer.v1")
+	ctx = ctxsetters.WithServiceName(ctx, "TransferService")
+	ctx = ctxsetters.WithMethodName(ctx, "RequestReversal")
+	caller := c.callRequestReversal
+	if c.interceptor != nil {
+		caller = func(ctx context.Context, req *RequestReversalRequest) (*RequestReversalResponse, error) {
+			resp, err := c.interceptor(
+				func(ctx context.Context, req interface{}) (interface{}, error) {
+					typedReq, ok := req.(*RequestReversalRequest)
+					if !ok {
+						return nil, twirp.InternalError("failed type assertion req.(*RequestReversalRequest) when calling interceptor")
+					}
+					return c.callRequestReversal(ctx, typedReq)
+				},
+			)(ctx, req)
+			if resp != nil {
+				typedResp, ok := resp.(*RequestReversalResponse)
+				if !ok {
+					return nil, twirp.InternalError("failed type assertion resp.(*RequestReversalResponse) when calling interceptor")
+				}
+				return typedResp, err
+			}
+			return nil, err
+		}
+	}
+	return caller(ctx, in)
+}
+
+func (c *transferServiceProtobufClient) callRequestReversal(ctx context.Context, in *RequestReversalRequest) (*RequestReversalResponse, error) {
+	out := new(RequestReversalResponse)
+	ctx, err := doProtobufRequest(ctx, c.client, c.opts.Hooks, c.urls[2], in, out)
+	if err != nil {
+		twerr, ok := err.(twirp.Error)
+		if !ok {
+			twerr = twirp.InternalErrorWith(err)
+		}
+		callClientError(ctx, c.opts.Hooks, twerr)
+		return nil, err
+	}
+
+	callClientResponseReceived(ctx, c.opts.Hooks)
+
+	return out, nil
+}
+
+func (c *transferServiceProtobufClient) ConfirmStagedTransfer(ctx context.Context, in *ConfirmStagedTransferRequest) (*ConfirmStagedTransferResponse, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "transfer.v1")
+	ctx = ctxsetters.WithServiceName(ctx, "TransferService")
+	ctx = ctxsetters.WithMethodName(ctx, "ConfirmStagedTransfer")
+	caller := c.callConfirmStagedTransfer
+	if c.interceptor != nil {
+		caller = func(ctx context.Context, req *ConfirmStagedTransferRequest) (*ConfirmStagedTransferResponse, error) {
+			resp, err := c.interceptor(
+				func(ctx context.Context, req interface{}) (interface{}, error) {
+					typedReq, ok := req.(*ConfirmStagedTransferRequest)
+					if !ok {
+						return nil, twirp.InternalError("failed type assertion req.(*ConfirmStagedTransferRequest) when calling interceptor")
+					}
+					return c.callConfirmStagedTransfer(ctx, typedReq)
+				},
+			)(ctx, req)
+			if resp != nil {
+				typedResp, ok := resp.(*ConfirmStagedTransferResponse)
+				if !ok {
+					return nil, twirp.InternalError("failed type assertion resp.(*ConfirmStagedTransferResponse) when calling interceptor")
+				}
+				return typedResp, err
+			}
+			return nil, err
+		}
+	}
+	return caller(ctx, in)
+}
+
+func (c *transferServiceProtobufClient) callConfirmStagedTransfer(ctx context.Context, in *ConfirmStagedTransferRequest) (*ConfirmStagedTransferResponse, error) {
+	out := new(ConfirmStagedTransferResponse)
+	ctx, err := doProtobufRequest(ctx, c.client, c.opts.Hooks, c.urls[3], in, out)
+	if err != nil {
+		twerr, ok := err.(twirp.Error)
+		if !ok {
+			twerr = twirp.InternalErrorWith(err)
+		}
+		callClientError(ctx, c.opts.Hooks, twerr)
+		return nil, err
+	}
+
+	callClientResponseReceived(ctx, c.opts.Hooks)
+
+	return out, nil
+}
+
+func (c *transferServiceProtobufClient) CancelStagedTransfer(ctx context.Context, in *CancelStagedTransferRequest) (*CancelStagedTransferResponse, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "transfer.v1")
+	ctx = ctxsetters.WithServiceName(ctx, "TransferService")
+	ctx = ctxsetters.WithMethodName(ctx, "CancelStagedTransfer")
+	caller := c.callCancelStagedTransfer
+	if c.interceptor != nil {
+		caller = func(ctx context.Context, req *CancelStagedTransferRequest) (*CancelStagedTransferResponse, error) {
+			resp, err := c.interceptor(
+				func(ctx context.Context, req interface{}) (interface{}, error) {
+					typedReq, ok := req.(*CancelStagedTransferRequest)
+					if !ok {
+						return nil, twirp.InternalError("failed type assertion req.(*CancelStagedTransferRequest) when calling interceptor")
+					}
+					return c.callCancelStagedTransfer(ctx, typedReq)
+				},
+			)(ctx, req)
+			if resp != nil {
+				typedResp, ok := resp.(*CancelStagedTransferResponse)
+				if !ok {
+					return nil, twirp.InternalError("failed type assertion resp.(*CancelStagedTransferResponse) when calling interceptor")
+				}
+				return typedResp, err
+			}
+			return nil, err
+		}
+	}
+	return caller(ctx, in)
+}
+
+func (c *transferServiceProtobufClient) callCancelStagedTransfer(ctx context.Context, in *CancelStagedTransferRequest) (*CancelStagedTransferResponse, error) {
+	out := new(CancelStagedTransferResponse)
+	ctx, err := doProtobufRequest(ctx, c.client, c.opts.Hooks, c.urls[4], in, out)
+	if err != nil {
+		twerr, ok := err.(twirp.Error)
+		if !ok {
+			twerr = twirp.InternalErrorWith(err)
+		}
+		callClientError(ctx, c.opts.Hooks, twerr)
+		return nil, err
+	}
+
+	callClientResponseReceived(ctx, c.opts.Hooks)
+
+	return out, nil
+}
+
+func (c *transferServiceProtobufClient) PostPendingTransfer(ctx context.Context, in *PostPendingTransferRequest) (*PostPendingTransferResponse, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "transfer.v1")
+	ctx = ctxsetters.WithServiceName(ctx, "TransferService")
+	ctx = ctxsetters.WithMethodName(ctx, "PostPendingTransfer")
+	caller := c.callPostPendingTransfer
+	if c.interceptor != nil {
+		caller = func(ctx context.Context, req *PostPendingTransferRequest) (*PostPendingTransferResponse, error) {
+			resp, err := c.interceptor(
+				func(ctx context.Context, req interface{}) (interface{}, error) {
+					typedReq, ok := req.(*PostPendingTransferRequest)
+					if !ok {
+						return nil, twirp.InternalError("failed type assertion req.(*PostPendingTransferRequest) when calling interceptor")
+					}
+					return c.callPostPendingTransfer(ctx, typedReq)
+				},
+			)(ctx, req)
+			if resp != nil {
+				typedResp, ok := resp.(*PostPendingTransferResponse)
+				if !ok {
+					return nil, twirp.InternalError("failed type assertion resp.(*PostPendingTransferResponse) when calling interceptor")
+				}
+				return typedResp, err
+			}
+			return nil, err
+		}
+	}
+	return caller(ctx, in)
+}
+
+func (c *transferServiceProtobufClient) callPostPendingTransfer(ctx context.Context, in *PostPendingTransferRequest) (*PostPendingTransferResponse, error) {
+	out := new(PostPendingTransferResponse)
+	ctx, err := doProtobufRequest(ctx, c.client, c.opts.Hooks, c.urls[5], in, out)
+	if err != nil {
+		twerr, ok := err.(twirp.Error)
+		if !ok {
+			twerr = twirp.InternalErrorWith(err)
+		}
+		callClientError(ctx, c.opts.Hooks, twerr)
+		return nil, err
+	}
+
+	callClientResponseReceived(ctx, c.opts.Hooks)
+
+	return out, nil
+}
+
 // ===========================
 // TransferService JSON Client
 // ===========================
 
 type transferServiceJSONClient struct {
 	client      HTTPClient
-	urls        [2]string
+	urls        [6]string
 	interceptor twirp.Interceptor
 	opts        twirp.ClientOptions
 }
@@ -210,9 +406,13 @@ func NewTransferServiceJSONClient(baseURL string, client HTTPClient, opts ...twi
 	// Build method URLs: <baseURL>[<prefix>]/<package>.<Service>/<Method>
 	serviceURL := sanitizeBaseURL(baseURL)
 	serviceURL += baseServicePath(pathPrefix, "transfer.v1", "TransferService")
-	urls := [2]string{
+	urls := [6]string{
 		serviceURL + "RequestTransfer",
 		serviceURL + "CancelAcceptedTransfer",
+		serviceURL + "RequestReversal",
+		serviceURL + "ConfirmStagedTransfer",
+		serviceURL + "CancelStagedTransfer",
+		serviceURL + "PostPendingTransfer",
 	}
 
 	return &transferServiceJSONClient{
@@ -301,6 +501,190 @@ func (c *transferServiceJSONClient) CancelAcceptedTransfer(ctx context.Context, 
 func (c *transferServiceJSONClient) callCancelAcceptedTransfer(ctx context.Context, in *CancelAcceptedTransferRequest) (*CancelAcceptedTransferResponse, error) {
 	out := new(CancelAcceptedTransferResponse)
 	ctx, err := doJSONRequest(ctx, c.client, c.opts.Hooks, c.urls[1], in, out)
+	if err != nil {
+		twerr, ok := err.(twirp.Error)
+		if !ok {
+			twerr = twirp.InternalErrorWith(err)
+		}
+		callClientError(ctx, c.opts.Hooks, twerr)
+		return nil, err
+	}
+
+	callClientResponseReceived(ctx, c.opts.Hooks)
+
+	return out, nil
+}
+
+func (c *transferServiceJSONClient) RequestReversal(ctx context.Context, in *RequestReversalRequest) (*RequestReversalResponse, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "transfer.v1")
+	ctx = ctxsetters.WithServiceName(ctx, "TransferService")
+	ctx = ctxsetters.WithMethodName(ctx, "RequestReversal")
+	caller := c.callRequestReversal
+	if c.interceptor != nil {
+		caller = func(ctx context.Context, req *RequestReversalRequest) (*RequestReversalResponse, error) {
+			resp, err := c.interceptor(
+				func(ctx context.Context, req interface{}) (interface{}, error) {
+					typedReq, ok := req.(*RequestReversalRequest)
+					if !ok {
+						return nil, twirp.InternalError("failed type assertion req.(*RequestReversalRequest) when calling interceptor")
+					}
+					return c.callRequestReversal(ctx, typedReq)
+				},
+			)(ctx, req)
+			if resp != nil {
+				typedResp, ok := resp.(*RequestReversalResponse)
+				if !ok {
+					return nil, twirp.InternalError("failed type assertion resp.(*RequestReversalResponse) when calling interceptor")
+				}
+				return typedResp, err
+			}
+			return nil, err
+		}
+	}
+	return caller(ctx, in)
+}
+
+func (c *transferServiceJSONClient) callRequestReversal(ctx context.Context, in *RequestReversalRequest) (*RequestReversalResponse, error) {
+	out := new(RequestReversalResponse)
+	ctx, err := doJSONRequest(ctx, c.client, c.opts.Hooks, c.urls[2], in, out)
+	if err != nil {
+		twerr, ok := err.(twirp.Error)
+		if !ok {
+			twerr = twirp.InternalErrorWith(err)
+		}
+		callClientError(ctx, c.opts.Hooks, twerr)
+		return nil, err
+	}
+
+	callClientResponseReceived(ctx, c.opts.Hooks)
+
+	return out, nil
+}
+
+func (c *transferServiceJSONClient) ConfirmStagedTransfer(ctx context.Context, in *ConfirmStagedTransferRequest) (*ConfirmStagedTransferResponse, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "transfer.v1")
+	ctx = ctxsetters.WithServiceName(ctx, "TransferService")
+	ctx = ctxsetters.WithMethodName(ctx, "ConfirmStagedTransfer")
+	caller := c.callConfirmStagedTransfer
+	if c.interceptor != nil {
+		caller = func(ctx context.Context, req *ConfirmStagedTransferRequest) (*ConfirmStagedTransferResponse, error) {
+			resp, err := c.interceptor(
+				func(ctx context.Context, req interface{}) (interface{}, error) {
+					typedReq, ok := req.(*ConfirmStagedTransferRequest)
+					if !ok {
+						return nil, twirp.InternalError("failed type assertion req.(*ConfirmStagedTransferRequest) when calling interceptor")
+					}
+					return c.callConfirmStagedTransfer(ctx, typedReq)
+				},
+			)(ctx, req)
+			if resp != nil {
+				typedResp, ok := resp.(*ConfirmStagedTransferResponse)
+				if !ok {
+					return nil, twirp.InternalError("failed type assertion resp.(*ConfirmStagedTransferResponse) when calling interceptor")
+				}
+				return typedResp, err
+			}
+			return nil, err
+		}
+	}
+	return caller(ctx, in)
+}
+
+func (c *transferServiceJSONClient) callConfirmStagedTransfer(ctx context.Context, in *ConfirmStagedTransferRequest) (*ConfirmStagedTransferResponse, error) {
+	out := new(ConfirmStagedTransferResponse)
+	ctx, err := doJSONRequest(ctx, c.client, c.opts.Hooks, c.urls[3], in, out)
+	if err != nil {
+		twerr, ok := err.(twirp.Error)
+		if !ok {
+			twerr = twirp.InternalErrorWith(err)
+		}
+		callClientError(ctx, c.opts.Hooks, twerr)
+		return nil, err
+	}
+
+	callClientResponseReceived(ctx, c.opts.Hooks)
+
+	return out, nil
+}
+
+func (c *transferServiceJSONClient) CancelStagedTransfer(ctx context.Context, in *CancelStagedTransferRequest) (*CancelStagedTransferResponse, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "transfer.v1")
+	ctx = ctxsetters.WithServiceName(ctx, "TransferService")
+	ctx = ctxsetters.WithMethodName(ctx, "CancelStagedTransfer")
+	caller := c.callCancelStagedTransfer
+	if c.interceptor != nil {
+		caller = func(ctx context.Context, req *CancelStagedTransferRequest) (*CancelStagedTransferResponse, error) {
+			resp, err := c.interceptor(
+				func(ctx context.Context, req interface{}) (interface{}, error) {
+					typedReq, ok := req.(*CancelStagedTransferRequest)
+					if !ok {
+						return nil, twirp.InternalError("failed type assertion req.(*CancelStagedTransferRequest) when calling interceptor")
+					}
+					return c.callCancelStagedTransfer(ctx, typedReq)
+				},
+			)(ctx, req)
+			if resp != nil {
+				typedResp, ok := resp.(*CancelStagedTransferResponse)
+				if !ok {
+					return nil, twirp.InternalError("failed type assertion resp.(*CancelStagedTransferResponse) when calling interceptor")
+				}
+				return typedResp, err
+			}
+			return nil, err
+		}
+	}
+	return caller(ctx, in)
+}
+
+func (c *transferServiceJSONClient) callCancelStagedTransfer(ctx context.Context, in *CancelStagedTransferRequest) (*CancelStagedTransferResponse, error) {
+	out := new(CancelStagedTransferResponse)
+	ctx, err := doJSONRequest(ctx, c.client, c.opts.Hooks, c.urls[4], in, out)
+	if err != nil {
+		twerr, ok := err.(twirp.Error)
+		if !ok {
+			twerr = twirp.InternalErrorWith(err)
+		}
+		callClientError(ctx, c.opts.Hooks, twerr)
+		return nil, err
+	}
+
+	callClientResponseReceived(ctx, c.opts.Hooks)
+
+	return out, nil
+}
+
+func (c *transferServiceJSONClient) PostPendingTransfer(ctx context.Context, in *PostPendingTransferRequest) (*PostPendingTransferResponse, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "transfer.v1")
+	ctx = ctxsetters.WithServiceName(ctx, "TransferService")
+	ctx = ctxsetters.WithMethodName(ctx, "PostPendingTransfer")
+	caller := c.callPostPendingTransfer
+	if c.interceptor != nil {
+		caller = func(ctx context.Context, req *PostPendingTransferRequest) (*PostPendingTransferResponse, error) {
+			resp, err := c.interceptor(
+				func(ctx context.Context, req interface{}) (interface{}, error) {
+					typedReq, ok := req.(*PostPendingTransferRequest)
+					if !ok {
+						return nil, twirp.InternalError("failed type assertion req.(*PostPendingTransferRequest) when calling interceptor")
+					}
+					return c.callPostPendingTransfer(ctx, typedReq)
+				},
+			)(ctx, req)
+			if resp != nil {
+				typedResp, ok := resp.(*PostPendingTransferResponse)
+				if !ok {
+					return nil, twirp.InternalError("failed type assertion resp.(*PostPendingTransferResponse) when calling interceptor")
+				}
+				return typedResp, err
+			}
+			return nil, err
+		}
+	}
+	return caller(ctx, in)
+}
+
+func (c *transferServiceJSONClient) callPostPendingTransfer(ctx context.Context, in *PostPendingTransferRequest) (*PostPendingTransferResponse, error) {
+	out := new(PostPendingTransferResponse)
+	ctx, err := doJSONRequest(ctx, c.client, c.opts.Hooks, c.urls[5], in, out)
 	if err != nil {
 		twerr, ok := err.(twirp.Error)
 		if !ok {
@@ -417,6 +801,18 @@ func (s *transferServiceServer) ServeHTTP(resp http.ResponseWriter, req *http.Re
 		return
 	case "CancelAcceptedTransfer":
 		s.serveCancelAcceptedTransfer(ctx, resp, req)
+		return
+	case "RequestReversal":
+		s.serveRequestReversal(ctx, resp, req)
+		return
+	case "ConfirmStagedTransfer":
+		s.serveConfirmStagedTransfer(ctx, resp, req)
+		return
+	case "CancelStagedTransfer":
+		s.serveCancelStagedTransfer(ctx, resp, req)
+		return
+	case "PostPendingTransfer":
+		s.servePostPendingTransfer(ctx, resp, req)
 		return
 	default:
 		msg := fmt.Sprintf("no handler for path %q", req.URL.Path)
@@ -762,6 +1158,726 @@ func (s *transferServiceServer) serveCancelAcceptedTransferProtobuf(ctx context.
 	}
 	if respContent == nil {
 		s.writeError(ctx, resp, twirp.InternalError("received a nil *CancelAcceptedTransferResponse and nil error while calling CancelAcceptedTransfer. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	respBytes, err := proto.Marshal(respContent)
+	if err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to marshal proto response"))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	resp.Header().Set("Content-Type", "application/protobuf")
+	resp.Header().Set("Content-Length", strconv.Itoa(len(respBytes)))
+	resp.WriteHeader(http.StatusOK)
+	if n, err := resp.Write(respBytes); err != nil {
+		msg := fmt.Sprintf("failed to write response, %d of %d bytes written: %s", n, len(respBytes), err.Error())
+		twerr := twirp.NewError(twirp.Unknown, msg)
+		ctx = callError(ctx, s.hooks, twerr)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *transferServiceServer) serveRequestReversal(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	header := req.Header.Get("Content-Type")
+	i := strings.Index(header, ";")
+	if i == -1 {
+		i = len(header)
+	}
+	switch strings.TrimSpace(strings.ToLower(header[:i])) {
+	case "application/json":
+		s.serveRequestReversalJSON(ctx, resp, req)
+	case "application/protobuf":
+		s.serveRequestReversalProtobuf(ctx, resp, req)
+	default:
+		msg := fmt.Sprintf("unexpected Content-Type: %q", req.Header.Get("Content-Type"))
+		twerr := badRouteError(msg, req.Method, req.URL.Path)
+		s.writeError(ctx, resp, twerr)
+	}
+}
+
+func (s *transferServiceServer) serveRequestReversalJSON(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "RequestReversal")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	d := json.NewDecoder(req.Body)
+	rawReqBody := json.RawMessage{}
+	if err := d.Decode(&rawReqBody); err != nil {
+		s.handleRequestBodyError(ctx, resp, "the json request could not be decoded", err)
+		return
+	}
+	reqContent := new(RequestReversalRequest)
+	unmarshaler := protojson.UnmarshalOptions{DiscardUnknown: true}
+	if err = unmarshaler.Unmarshal(rawReqBody, reqContent); err != nil {
+		s.handleRequestBodyError(ctx, resp, "the json request could not be decoded", err)
+		return
+	}
+
+	handler := s.TransferService.RequestReversal
+	if s.interceptor != nil {
+		handler = func(ctx context.Context, req *RequestReversalRequest) (*RequestReversalResponse, error) {
+			resp, err := s.interceptor(
+				func(ctx context.Context, req interface{}) (interface{}, error) {
+					typedReq, ok := req.(*RequestReversalRequest)
+					if !ok {
+						return nil, twirp.InternalError("failed type assertion req.(*RequestReversalRequest) when calling interceptor")
+					}
+					return s.TransferService.RequestReversal(ctx, typedReq)
+				},
+			)(ctx, req)
+			if resp != nil {
+				typedResp, ok := resp.(*RequestReversalResponse)
+				if !ok {
+					return nil, twirp.InternalError("failed type assertion resp.(*RequestReversalResponse) when calling interceptor")
+				}
+				return typedResp, err
+			}
+			return nil, err
+		}
+	}
+
+	// Call service method
+	var respContent *RequestReversalResponse
+	func() {
+		defer ensurePanicResponses(ctx, resp, s.hooks)
+		respContent, err = handler(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *RequestReversalResponse and nil error while calling RequestReversal. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	marshaler := &protojson.MarshalOptions{UseProtoNames: !s.jsonCamelCase, EmitUnpopulated: !s.jsonSkipDefaults}
+	respBytes, err := marshaler.Marshal(respContent)
+	if err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to marshal json response"))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	resp.Header().Set("Content-Type", "application/json")
+	resp.Header().Set("Content-Length", strconv.Itoa(len(respBytes)))
+	resp.WriteHeader(http.StatusOK)
+
+	if n, err := resp.Write(respBytes); err != nil {
+		msg := fmt.Sprintf("failed to write response, %d of %d bytes written: %s", n, len(respBytes), err.Error())
+		twerr := twirp.NewError(twirp.Unknown, msg)
+		ctx = callError(ctx, s.hooks, twerr)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *transferServiceServer) serveRequestReversalProtobuf(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "RequestReversal")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	buf, err := io.ReadAll(req.Body)
+	if err != nil {
+		s.handleRequestBodyError(ctx, resp, "failed to read request body", err)
+		return
+	}
+	reqContent := new(RequestReversalRequest)
+	if err = proto.Unmarshal(buf, reqContent); err != nil {
+		s.writeError(ctx, resp, malformedRequestError("the protobuf request could not be decoded"))
+		return
+	}
+
+	handler := s.TransferService.RequestReversal
+	if s.interceptor != nil {
+		handler = func(ctx context.Context, req *RequestReversalRequest) (*RequestReversalResponse, error) {
+			resp, err := s.interceptor(
+				func(ctx context.Context, req interface{}) (interface{}, error) {
+					typedReq, ok := req.(*RequestReversalRequest)
+					if !ok {
+						return nil, twirp.InternalError("failed type assertion req.(*RequestReversalRequest) when calling interceptor")
+					}
+					return s.TransferService.RequestReversal(ctx, typedReq)
+				},
+			)(ctx, req)
+			if resp != nil {
+				typedResp, ok := resp.(*RequestReversalResponse)
+				if !ok {
+					return nil, twirp.InternalError("failed type assertion resp.(*RequestReversalResponse) when calling interceptor")
+				}
+				return typedResp, err
+			}
+			return nil, err
+		}
+	}
+
+	// Call service method
+	var respContent *RequestReversalResponse
+	func() {
+		defer ensurePanicResponses(ctx, resp, s.hooks)
+		respContent, err = handler(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *RequestReversalResponse and nil error while calling RequestReversal. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	respBytes, err := proto.Marshal(respContent)
+	if err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to marshal proto response"))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	resp.Header().Set("Content-Type", "application/protobuf")
+	resp.Header().Set("Content-Length", strconv.Itoa(len(respBytes)))
+	resp.WriteHeader(http.StatusOK)
+	if n, err := resp.Write(respBytes); err != nil {
+		msg := fmt.Sprintf("failed to write response, %d of %d bytes written: %s", n, len(respBytes), err.Error())
+		twerr := twirp.NewError(twirp.Unknown, msg)
+		ctx = callError(ctx, s.hooks, twerr)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *transferServiceServer) serveConfirmStagedTransfer(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	header := req.Header.Get("Content-Type")
+	i := strings.Index(header, ";")
+	if i == -1 {
+		i = len(header)
+	}
+	switch strings.TrimSpace(strings.ToLower(header[:i])) {
+	case "application/json":
+		s.serveConfirmStagedTransferJSON(ctx, resp, req)
+	case "application/protobuf":
+		s.serveConfirmStagedTransferProtobuf(ctx, resp, req)
+	default:
+		msg := fmt.Sprintf("unexpected Content-Type: %q", req.Header.Get("Content-Type"))
+		twerr := badRouteError(msg, req.Method, req.URL.Path)
+		s.writeError(ctx, resp, twerr)
+	}
+}
+
+func (s *transferServiceServer) serveConfirmStagedTransferJSON(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "ConfirmStagedTransfer")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	d := json.NewDecoder(req.Body)
+	rawReqBody := json.RawMessage{}
+	if err := d.Decode(&rawReqBody); err != nil {
+		s.handleRequestBodyError(ctx, resp, "the json request could not be decoded", err)
+		return
+	}
+	reqContent := new(ConfirmStagedTransferRequest)
+	unmarshaler := protojson.UnmarshalOptions{DiscardUnknown: true}
+	if err = unmarshaler.Unmarshal(rawReqBody, reqContent); err != nil {
+		s.handleRequestBodyError(ctx, resp, "the json request could not be decoded", err)
+		return
+	}
+
+	handler := s.TransferService.ConfirmStagedTransfer
+	if s.interceptor != nil {
+		handler = func(ctx context.Context, req *ConfirmStagedTransferRequest) (*ConfirmStagedTransferResponse, error) {
+			resp, err := s.interceptor(
+				func(ctx context.Context, req interface{}) (interface{}, error) {
+					typedReq, ok := req.(*ConfirmStagedTransferRequest)
+					if !ok {
+						return nil, twirp.InternalError("failed type assertion req.(*ConfirmStagedTransferRequest) when calling interceptor")
+					}
+					return s.TransferService.ConfirmStagedTransfer(ctx, typedReq)
+				},
+			)(ctx, req)
+			if resp != nil {
+				typedResp, ok := resp.(*ConfirmStagedTransferResponse)
+				if !ok {
+					return nil, twirp.InternalError("failed type assertion resp.(*ConfirmStagedTransferResponse) when calling interceptor")
+				}
+				return typedResp, err
+			}
+			return nil, err
+		}
+	}
+
+	// Call service method
+	var respContent *ConfirmStagedTransferResponse
+	func() {
+		defer ensurePanicResponses(ctx, resp, s.hooks)
+		respContent, err = handler(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *ConfirmStagedTransferResponse and nil error while calling ConfirmStagedTransfer. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	marshaler := &protojson.MarshalOptions{UseProtoNames: !s.jsonCamelCase, EmitUnpopulated: !s.jsonSkipDefaults}
+	respBytes, err := marshaler.Marshal(respContent)
+	if err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to marshal json response"))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	resp.Header().Set("Content-Type", "application/json")
+	resp.Header().Set("Content-Length", strconv.Itoa(len(respBytes)))
+	resp.WriteHeader(http.StatusOK)
+
+	if n, err := resp.Write(respBytes); err != nil {
+		msg := fmt.Sprintf("failed to write response, %d of %d bytes written: %s", n, len(respBytes), err.Error())
+		twerr := twirp.NewError(twirp.Unknown, msg)
+		ctx = callError(ctx, s.hooks, twerr)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *transferServiceServer) serveConfirmStagedTransferProtobuf(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "ConfirmStagedTransfer")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	buf, err := io.ReadAll(req.Body)
+	if err != nil {
+		s.handleRequestBodyError(ctx, resp, "failed to read request body", err)
+		return
+	}
+	reqContent := new(ConfirmStagedTransferRequest)
+	if err = proto.Unmarshal(buf, reqContent); err != nil {
+		s.writeError(ctx, resp, malformedRequestError("the protobuf request could not be decoded"))
+		return
+	}
+
+	handler := s.TransferService.ConfirmStagedTransfer
+	if s.interceptor != nil {
+		handler = func(ctx context.Context, req *ConfirmStagedTransferRequest) (*ConfirmStagedTransferResponse, error) {
+			resp, err := s.interceptor(
+				func(ctx context.Context, req interface{}) (interface{}, error) {
+					typedReq, ok := req.(*ConfirmStagedTransferRequest)
+					if !ok {
+						return nil, twirp.InternalError("failed type assertion req.(*ConfirmStagedTransferRequest) when calling interceptor")
+					}
+					return s.TransferService.ConfirmStagedTransfer(ctx, typedReq)
+				},
+			)(ctx, req)
+			if resp != nil {
+				typedResp, ok := resp.(*ConfirmStagedTransferResponse)
+				if !ok {
+					return nil, twirp.InternalError("failed type assertion resp.(*ConfirmStagedTransferResponse) when calling interceptor")
+				}
+				return typedResp, err
+			}
+			return nil, err
+		}
+	}
+
+	// Call service method
+	var respContent *ConfirmStagedTransferResponse
+	func() {
+		defer ensurePanicResponses(ctx, resp, s.hooks)
+		respContent, err = handler(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *ConfirmStagedTransferResponse and nil error while calling ConfirmStagedTransfer. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	respBytes, err := proto.Marshal(respContent)
+	if err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to marshal proto response"))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	resp.Header().Set("Content-Type", "application/protobuf")
+	resp.Header().Set("Content-Length", strconv.Itoa(len(respBytes)))
+	resp.WriteHeader(http.StatusOK)
+	if n, err := resp.Write(respBytes); err != nil {
+		msg := fmt.Sprintf("failed to write response, %d of %d bytes written: %s", n, len(respBytes), err.Error())
+		twerr := twirp.NewError(twirp.Unknown, msg)
+		ctx = callError(ctx, s.hooks, twerr)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *transferServiceServer) serveCancelStagedTransfer(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	header := req.Header.Get("Content-Type")
+	i := strings.Index(header, ";")
+	if i == -1 {
+		i = len(header)
+	}
+	switch strings.TrimSpace(strings.ToLower(header[:i])) {
+	case "application/json":
+		s.serveCancelStagedTransferJSON(ctx, resp, req)
+	case "application/protobuf":
+		s.serveCancelStagedTransferProtobuf(ctx, resp, req)
+	default:
+		msg := fmt.Sprintf("unexpected Content-Type: %q", req.Header.Get("Content-Type"))
+		twerr := badRouteError(msg, req.Method, req.URL.Path)
+		s.writeError(ctx, resp, twerr)
+	}
+}
+
+func (s *transferServiceServer) serveCancelStagedTransferJSON(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "CancelStagedTransfer")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	d := json.NewDecoder(req.Body)
+	rawReqBody := json.RawMessage{}
+	if err := d.Decode(&rawReqBody); err != nil {
+		s.handleRequestBodyError(ctx, resp, "the json request could not be decoded", err)
+		return
+	}
+	reqContent := new(CancelStagedTransferRequest)
+	unmarshaler := protojson.UnmarshalOptions{DiscardUnknown: true}
+	if err = unmarshaler.Unmarshal(rawReqBody, reqContent); err != nil {
+		s.handleRequestBodyError(ctx, resp, "the json request could not be decoded", err)
+		return
+	}
+
+	handler := s.TransferService.CancelStagedTransfer
+	if s.interceptor != nil {
+		handler = func(ctx context.Context, req *CancelStagedTransferRequest) (*CancelStagedTransferResponse, error) {
+			resp, err := s.interceptor(
+				func(ctx context.Context, req interface{}) (interface{}, error) {
+					typedReq, ok := req.(*CancelStagedTransferRequest)
+					if !ok {
+						return nil, twirp.InternalError("failed type assertion req.(*CancelStagedTransferRequest) when calling interceptor")
+					}
+					return s.TransferService.CancelStagedTransfer(ctx, typedReq)
+				},
+			)(ctx, req)
+			if resp != nil {
+				typedResp, ok := resp.(*CancelStagedTransferResponse)
+				if !ok {
+					return nil, twirp.InternalError("failed type assertion resp.(*CancelStagedTransferResponse) when calling interceptor")
+				}
+				return typedResp, err
+			}
+			return nil, err
+		}
+	}
+
+	// Call service method
+	var respContent *CancelStagedTransferResponse
+	func() {
+		defer ensurePanicResponses(ctx, resp, s.hooks)
+		respContent, err = handler(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *CancelStagedTransferResponse and nil error while calling CancelStagedTransfer. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	marshaler := &protojson.MarshalOptions{UseProtoNames: !s.jsonCamelCase, EmitUnpopulated: !s.jsonSkipDefaults}
+	respBytes, err := marshaler.Marshal(respContent)
+	if err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to marshal json response"))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	resp.Header().Set("Content-Type", "application/json")
+	resp.Header().Set("Content-Length", strconv.Itoa(len(respBytes)))
+	resp.WriteHeader(http.StatusOK)
+
+	if n, err := resp.Write(respBytes); err != nil {
+		msg := fmt.Sprintf("failed to write response, %d of %d bytes written: %s", n, len(respBytes), err.Error())
+		twerr := twirp.NewError(twirp.Unknown, msg)
+		ctx = callError(ctx, s.hooks, twerr)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *transferServiceServer) serveCancelStagedTransferProtobuf(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "CancelStagedTransfer")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	buf, err := io.ReadAll(req.Body)
+	if err != nil {
+		s.handleRequestBodyError(ctx, resp, "failed to read request body", err)
+		return
+	}
+	reqContent := new(CancelStagedTransferRequest)
+	if err = proto.Unmarshal(buf, reqContent); err != nil {
+		s.writeError(ctx, resp, malformedRequestError("the protobuf request could not be decoded"))
+		return
+	}
+
+	handler := s.TransferService.CancelStagedTransfer
+	if s.interceptor != nil {
+		handler = func(ctx context.Context, req *CancelStagedTransferRequest) (*CancelStagedTransferResponse, error) {
+			resp, err := s.interceptor(
+				func(ctx context.Context, req interface{}) (interface{}, error) {
+					typedReq, ok := req.(*CancelStagedTransferRequest)
+					if !ok {
+						return nil, twirp.InternalError("failed type assertion req.(*CancelStagedTransferRequest) when calling interceptor")
+					}
+					return s.TransferService.CancelStagedTransfer(ctx, typedReq)
+				},
+			)(ctx, req)
+			if resp != nil {
+				typedResp, ok := resp.(*CancelStagedTransferResponse)
+				if !ok {
+					return nil, twirp.InternalError("failed type assertion resp.(*CancelStagedTransferResponse) when calling interceptor")
+				}
+				return typedResp, err
+			}
+			return nil, err
+		}
+	}
+
+	// Call service method
+	var respContent *CancelStagedTransferResponse
+	func() {
+		defer ensurePanicResponses(ctx, resp, s.hooks)
+		respContent, err = handler(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *CancelStagedTransferResponse and nil error while calling CancelStagedTransfer. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	respBytes, err := proto.Marshal(respContent)
+	if err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to marshal proto response"))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	resp.Header().Set("Content-Type", "application/protobuf")
+	resp.Header().Set("Content-Length", strconv.Itoa(len(respBytes)))
+	resp.WriteHeader(http.StatusOK)
+	if n, err := resp.Write(respBytes); err != nil {
+		msg := fmt.Sprintf("failed to write response, %d of %d bytes written: %s", n, len(respBytes), err.Error())
+		twerr := twirp.NewError(twirp.Unknown, msg)
+		ctx = callError(ctx, s.hooks, twerr)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *transferServiceServer) servePostPendingTransfer(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	header := req.Header.Get("Content-Type")
+	i := strings.Index(header, ";")
+	if i == -1 {
+		i = len(header)
+	}
+	switch strings.TrimSpace(strings.ToLower(header[:i])) {
+	case "application/json":
+		s.servePostPendingTransferJSON(ctx, resp, req)
+	case "application/protobuf":
+		s.servePostPendingTransferProtobuf(ctx, resp, req)
+	default:
+		msg := fmt.Sprintf("unexpected Content-Type: %q", req.Header.Get("Content-Type"))
+		twerr := badRouteError(msg, req.Method, req.URL.Path)
+		s.writeError(ctx, resp, twerr)
+	}
+}
+
+func (s *transferServiceServer) servePostPendingTransferJSON(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "PostPendingTransfer")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	d := json.NewDecoder(req.Body)
+	rawReqBody := json.RawMessage{}
+	if err := d.Decode(&rawReqBody); err != nil {
+		s.handleRequestBodyError(ctx, resp, "the json request could not be decoded", err)
+		return
+	}
+	reqContent := new(PostPendingTransferRequest)
+	unmarshaler := protojson.UnmarshalOptions{DiscardUnknown: true}
+	if err = unmarshaler.Unmarshal(rawReqBody, reqContent); err != nil {
+		s.handleRequestBodyError(ctx, resp, "the json request could not be decoded", err)
+		return
+	}
+
+	handler := s.TransferService.PostPendingTransfer
+	if s.interceptor != nil {
+		handler = func(ctx context.Context, req *PostPendingTransferRequest) (*PostPendingTransferResponse, error) {
+			resp, err := s.interceptor(
+				func(ctx context.Context, req interface{}) (interface{}, error) {
+					typedReq, ok := req.(*PostPendingTransferRequest)
+					if !ok {
+						return nil, twirp.InternalError("failed type assertion req.(*PostPendingTransferRequest) when calling interceptor")
+					}
+					return s.TransferService.PostPendingTransfer(ctx, typedReq)
+				},
+			)(ctx, req)
+			if resp != nil {
+				typedResp, ok := resp.(*PostPendingTransferResponse)
+				if !ok {
+					return nil, twirp.InternalError("failed type assertion resp.(*PostPendingTransferResponse) when calling interceptor")
+				}
+				return typedResp, err
+			}
+			return nil, err
+		}
+	}
+
+	// Call service method
+	var respContent *PostPendingTransferResponse
+	func() {
+		defer ensurePanicResponses(ctx, resp, s.hooks)
+		respContent, err = handler(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *PostPendingTransferResponse and nil error while calling PostPendingTransfer. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	marshaler := &protojson.MarshalOptions{UseProtoNames: !s.jsonCamelCase, EmitUnpopulated: !s.jsonSkipDefaults}
+	respBytes, err := marshaler.Marshal(respContent)
+	if err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to marshal json response"))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	resp.Header().Set("Content-Type", "application/json")
+	resp.Header().Set("Content-Length", strconv.Itoa(len(respBytes)))
+	resp.WriteHeader(http.StatusOK)
+
+	if n, err := resp.Write(respBytes); err != nil {
+		msg := fmt.Sprintf("failed to write response, %d of %d bytes written: %s", n, len(respBytes), err.Error())
+		twerr := twirp.NewError(twirp.Unknown, msg)
+		ctx = callError(ctx, s.hooks, twerr)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *transferServiceServer) servePostPendingTransferProtobuf(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "PostPendingTransfer")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	buf, err := io.ReadAll(req.Body)
+	if err != nil {
+		s.handleRequestBodyError(ctx, resp, "failed to read request body", err)
+		return
+	}
+	reqContent := new(PostPendingTransferRequest)
+	if err = proto.Unmarshal(buf, reqContent); err != nil {
+		s.writeError(ctx, resp, malformedRequestError("the protobuf request could not be decoded"))
+		return
+	}
+
+	handler := s.TransferService.PostPendingTransfer
+	if s.interceptor != nil {
+		handler = func(ctx context.Context, req *PostPendingTransferRequest) (*PostPendingTransferResponse, error) {
+			resp, err := s.interceptor(
+				func(ctx context.Context, req interface{}) (interface{}, error) {
+					typedReq, ok := req.(*PostPendingTransferRequest)
+					if !ok {
+						return nil, twirp.InternalError("failed type assertion req.(*PostPendingTransferRequest) when calling interceptor")
+					}
+					return s.TransferService.PostPendingTransfer(ctx, typedReq)
+				},
+			)(ctx, req)
+			if resp != nil {
+				typedResp, ok := resp.(*PostPendingTransferResponse)
+				if !ok {
+					return nil, twirp.InternalError("failed type assertion resp.(*PostPendingTransferResponse) when calling interceptor")
+				}
+				return typedResp, err
+			}
+			return nil, err
+		}
+	}
+
+	// Call service method
+	var respContent *PostPendingTransferResponse
+	func() {
+		defer ensurePanicResponses(ctx, resp, s.hooks)
+		respContent, err = handler(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *PostPendingTransferResponse and nil error while calling PostPendingTransfer. nil responses are not supported"))
 		return
 	}
 
@@ -1366,48 +2482,84 @@ func callClientError(ctx context.Context, h *twirp.ClientHooks, err twirp.Error)
 }
 
 var twirpFileDescriptor0 = []byte{
-	// 673 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x56, 0x4d, 0x6f, 0xd3, 0x40,
-	0x10, 0xad, 0x53, 0x08, 0x74, 0x52, 0xa5, 0xad, 0x11, 0x89, 0x13, 0x44, 0x09, 0x6e, 0x85, 0x42,
-	0x2b, 0xd9, 0x6a, 0xe1, 0x8a, 0x50, 0x5b, 0x09, 0x1a, 0x21, 0x04, 0x32, 0x95, 0x90, 0x38, 0x60,
-	0x6d, 0xec, 0x69, 0x6a, 0xb0, 0x77, 0xcd, 0x7a, 0x93, 0x8a, 0xbf, 0x02, 0x57, 0x7e, 0x1b, 0x7f,
-	0x82, 0x0b, 0xf2, 0xc7, 0xa6, 0x89, 0x9d, 0x6d, 0x0b, 0x1c, 0xb8, 0x65, 0x77, 0xde, 0xbe, 0x99,
-	0x79, 0x6f, 0xbc, 0x59, 0xe8, 0x0a, 0x4e, 0x68, 0x72, 0x8a, 0xdc, 0x9e, 0xec, 0xd9, 0xf2, 0xb7,
-	0x15, 0x73, 0x26, 0x98, 0xde, 0x98, 0xae, 0x27, 0x7b, 0xdd, 0xbb, 0xc9, 0x19, 0xe1, 0xe8, 0xa7,
-	0xb0, 0x88, 0x51, 0xfc, 0x9a, 0x63, 0xcc, 0x6f, 0x1a, 0xb4, 0x1c, 0xfc, 0x32, 0xc6, 0x44, 0x9c,
-	0x14, 0xe8, 0x62, 0xa9, 0x37, 0xa1, 0x16, 0xf8, 0x86, 0xd6, 0xd3, 0xfa, 0x2b, 0x4e, 0x2d, 0xf0,
-	0xf5, 0x6d, 0x68, 0x9e, 0x72, 0x16, 0xb9, 0xe7, 0x24, 0x0c, 0x51, 0xb8, 0x81, 0x6f, 0xd4, 0xb2,
-	0xd8, 0x6a, 0xba, 0xfb, 0x3e, 0xdb, 0x1c, 0xf8, 0x7a, 0x0f, 0x56, 0x05, 0x9b, 0xc1, 0x2c, 0x67,
-	0x18, 0x10, 0x6c, 0x8a, 0xe8, 0x43, 0x9d, 0x44, 0x6c, 0x4c, 0x85, 0x71, 0xa3, 0xa7, 0xf5, 0x1b,
-	0xfb, 0xeb, 0x56, 0x5e, 0x9a, 0x35, 0xd9, 0xb3, 0x5e, 0xa7, 0xa5, 0x39, 0x45, 0xdc, 0xfc, 0x5e,
-	0x83, 0x76, 0xa9, 0xaa, 0x03, 0xcf, 0xc3, 0x58, 0xa0, 0xff, 0xff, 0xab, 0xd3, 0x37, 0xa1, 0x21,
-	0x98, 0x2b, 0xd8, 0x67, 0xa4, 0x29, 0xd5, 0xcd, 0x8c, 0x6a, 0x45, 0xb0, 0x93, 0x74, 0x67, 0xe0,
-	0xeb, 0x16, 0xdc, 0xf1, 0x71, 0x18, 0x08, 0x97, 0xc5, 0xc8, 0x89, 0x08, 0x58, 0x0a, 0x4b, 0x8c,
-	0x7a, 0x6f, 0xb9, 0xbf, 0xe2, 0x6c, 0x64, 0xa1, 0x37, 0x32, 0x32, 0xf0, 0x93, 0x14, 0xef, 0x71,
-	0xf4, 0x4b, 0x07, 0x8c, 0x5b, 0x19, 0xef, 0x46, 0x1e, 0x9a, 0x39, 0x60, 0x1e, 0x54, 0xc4, 0x71,
-	0xf0, 0x13, 0x7a, 0x8b, 0xc4, 0x69, 0x41, 0x9d, 0x23, 0x49, 0x18, 0x2d, 0x44, 0x29, 0x56, 0xe6,
-	0x2f, 0x0d, 0xda, 0x15, 0xf7, 0x93, 0x98, 0xd1, 0x04, 0x2b, 0x1c, 0x43, 0xe8, 0xc8, 0x79, 0x72,
-	0x79, 0x7e, 0xc6, 0x25, 0x85, 0x1b, 0x19, 0x6d, 0x63, 0x7f, 0xdb, 0x9a, 0x99, 0x38, 0x4b, 0xe1,
-	0xdc, 0xf1, 0x92, 0xd3, 0x16, 0x0a, 0x53, 0x17, 0xe5, 0xe0, 0x45, 0x53, 0xc6, 0xf2, 0xd5, 0x39,
-	0xa4, 0x00, 0x0b, 0x72, 0xc8, 0xd0, 0xe1, 0xed, 0x54, 0x8b, 0x64, 0x1c, 0x0a, 0xf3, 0x25, 0xdc,
-	0x3f, 0x22, 0xd4, 0xc3, 0x50, 0xe6, 0xbf, 0xea, 0x0b, 0x50, 0xc9, 0x78, 0x04, 0x9d, 0x32, 0x45,
-	0x4e, 0x1c, 0xfe, 0x81, 0x17, 0x3f, 0x34, 0xd8, 0x54, 0x95, 0xa3, 0xb0, 0xe4, 0x0c, 0xee, 0x49,
-	0x07, 0xdc, 0xa9, 0x6e, 0x9e, 0xcc, 0x5c, 0x98, 0xf2, 0x68, 0x4e, 0x30, 0x65, 0x9d, 0xc7, 0x4b,
-	0x4e, 0x87, 0xa8, 0x82, 0x33, 0xa2, 0xf5, 0xa1, 0xf5, 0x4e, 0x10, 0x2e, 0xde, 0x72, 0x8c, 0x09,
-	0x0f, 0xe8, 0x48, 0x82, 0xcb, 0xd5, 0x99, 0x3b, 0x60, 0x54, 0x40, 0xd9, 0xd1, 0xaa, 0x28, 0xe6,
-	0x2e, 0x74, 0x8e, 0x58, 0x14, 0x87, 0x28, 0xf0, 0x6a, 0x62, 0x13, 0xd6, 0x65, 0x2c, 0x07, 0x2f,
-	0x20, 0x1c, 0xc0, 0x83, 0x2c, 0x57, 0xd1, 0x42, 0x40, 0x47, 0x12, 0xaa, 0xa2, 0x55, 0x1a, 0xf3,
-	0x0a, 0x1e, 0xaa, 0x59, 0x14, 0x0d, 0x29, 0xc9, 0x9e, 0x82, 0x29, 0x1b, 0xbd, 0x7e, 0x69, 0xa9,
-	0x3c, 0x65, 0x8c, 0x72, 0xc0, 0x2e, 0x5a, 0x67, 0x51, 0x8c, 0x34, 0x21, 0x22, 0xa0, 0xa3, 0x17,
-	0x24, 0x08, 0xff, 0xae, 0xf5, 0xf9, 0x93, 0x17, 0x9c, 0x8c, 0xfe, 0x4b, 0xeb, 0xd7, 0x2e, 0xcd,
-	0xec, 0x41, 0x53, 0xc6, 0x72, 0x64, 0x05, 0xf1, 0x18, 0xda, 0xb2, 0xdf, 0x28, 0x10, 0xe2, 0xb2,
-	0xc9, 0xd9, 0x85, 0xce, 0x4c, 0x27, 0x05, 0x5a, 0x35, 0x93, 0x3d, 0x68, 0xe6, 0x20, 0x25, 0xdd,
-	0x16, 0x6c, 0x94, 0xe8, 0xaa, 0x34, 0xfb, 0x3f, 0x35, 0x58, 0x9b, 0x4e, 0x0b, 0xf2, 0x49, 0xe0,
-	0xa1, 0xfe, 0x11, 0xd6, 0x4a, 0xd7, 0xae, 0xbe, 0x35, 0xf7, 0x99, 0x2e, 0xfe, 0x4b, 0xee, 0x6e,
-	0x5f, 0x0e, 0xca, 0xaf, 0x09, 0x73, 0x49, 0x4f, 0xa0, 0xb5, 0xf8, 0x2a, 0xd1, 0x77, 0xe6, 0x18,
-	0x2e, 0xbd, 0xfe, 0xba, 0xbb, 0xd7, 0xc2, 0xca, 0xa4, 0x87, 0xcf, 0x3f, 0x3c, 0x1b, 0x05, 0xe2,
-	0x6c, 0x3c, 0xb4, 0x3c, 0x16, 0xd9, 0x94, 0x44, 0x18, 0x62, 0x92, 0x50, 0x96, 0xce, 0x4a, 0xfe,
-	0xe6, 0x70, 0x4f, 0x43, 0x76, 0x6e, 0x8f, 0x98, 0x3d, 0x42, 0x6a, 0x67, 0xef, 0x0f, 0x7b, 0xe6,
-	0xf9, 0x32, 0xac, 0x67, 0x5b, 0x4f, 0x7e, 0x0f, 0x00, 0x2d, 0x9b, 0xdc, 0xec, 0xd4, 0x08, 0x00,
-	0x00,
+	// 1255 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xcc, 0x58, 0x5b, 0x6f, 0xe3, 0x44,
+	0x14, 0xce, 0xa5, 0x29, 0xbb, 0x27, 0xdd, 0x5e, 0xdc, 0x6e, 0x93, 0xa6, 0xb7, 0xac, 0xa9, 0x4a,
+	0x7a, 0x51, 0xa2, 0x16, 0xde, 0x10, 0x42, 0xbb, 0xdd, 0x4b, 0x22, 0x16, 0x6d, 0xe5, 0xae, 0x84,
+	0xc4, 0x03, 0x91, 0x6b, 0x4f, 0x5d, 0x2f, 0x8e, 0xc7, 0xd8, 0x93, 0x56, 0xbc, 0xf1, 0x0f, 0x78,
+	0xe0, 0x2f, 0x20, 0xf1, 0xca, 0x5f, 0xe2, 0x67, 0x20, 0x84, 0x84, 0xec, 0xf1, 0xd8, 0x8e, 0x3d,
+	0x63, 0x3b, 0x85, 0x07, 0xde, 0xec, 0x99, 0xcf, 0xe7, 0xcc, 0xf9, 0xce, 0x6d, 0x8e, 0xa1, 0x43,
+	0x5c, 0xd5, 0xf6, 0x6e, 0x90, 0x3b, 0xb8, 0x3b, 0x1b, 0xb0, 0xe7, 0xbe, 0xe3, 0x62, 0x82, 0xa5,
+	0x66, 0xf4, 0x7e, 0x77, 0xd6, 0x79, 0xea, 0xdd, 0xaa, 0x2e, 0xd2, 0x7d, 0xd8, 0x04, 0xdb, 0xe8,
+	0x47, 0x8a, 0x91, 0x7f, 0xaf, 0xc2, 0xa6, 0x82, 0x7e, 0x98, 0x22, 0x8f, 0xbc, 0x0f, 0xd1, 0xe1,
+	0xab, 0xb4, 0x0c, 0x35, 0x53, 0x6f, 0x57, 0xbb, 0xd5, 0xde, 0x63, 0xa5, 0x66, 0xea, 0xd2, 0x01,
+	0x2c, 0xdf, 0xb8, 0x78, 0x32, 0xbe, 0x57, 0x2d, 0x0b, 0x91, 0xb1, 0xa9, 0xb7, 0x6b, 0xc1, 0xde,
+	0x92, 0xbf, 0xfa, 0x4d, 0xb0, 0x38, 0xd2, 0xa5, 0x2e, 0x2c, 0x11, 0x9c, 0xc0, 0xd4, 0x03, 0x0c,
+	0x10, 0x1c, 0x21, 0x7a, 0xb0, 0xa8, 0x4e, 0xf0, 0xd4, 0x26, 0xed, 0x85, 0x6e, 0xb5, 0xd7, 0x3c,
+	0x5f, 0xed, 0xd3, 0xa3, 0xf5, 0xef, 0xce, 0xfa, 0x5f, 0xfb, 0x47, 0x53, 0xc2, 0x7d, 0x69, 0x03,
+	0x1a, 0x1e, 0x51, 0x0d, 0xd4, 0x6e, 0x74, 0xab, 0xbd, 0x47, 0x0a, 0x7d, 0x91, 0x7f, 0xae, 0xc2,
+	0x3a, 0x3b, 0xeb, 0x4b, 0xe4, 0x11, 0xd3, 0x56, 0x89, 0x89, 0x6d, 0x69, 0x0f, 0x9a, 0x04, 0x8f,
+	0x09, 0xfe, 0x1e, 0xd9, 0xe3, 0xe8, 0xe0, 0x8f, 0x09, 0x7e, 0xef, 0xaf, 0xcc, 0xe8, 0xad, 0x15,
+	0xe8, 0xed, 0xc3, 0xba, 0xe6, 0x22, 0xdd, 0x24, 0x63, 0xec, 0x20, 0x37, 0x90, 0x1e, 0x9b, 0xb2,
+	0x46, 0xb7, 0xde, 0xb1, 0x9d, 0x91, 0x2e, 0xff, 0x56, 0x83, 0x56, 0x8a, 0xbd, 0xe7, 0x9a, 0x86,
+	0x1c, 0x82, 0xf4, 0xff, 0x01, 0x8b, 0x2f, 0x61, 0x49, 0x8f, 0x69, 0xf2, 0xda, 0x8d, 0x6e, 0xbd,
+	0xd7, 0x3c, 0xef, 0xf6, 0x13, 0xd1, 0xd1, 0xe7, 0xf0, 0xa9, 0xcc, 0x7c, 0xe5, 0x73, 0xa2, 0xa3,
+	0xeb, 0x14, 0x25, 0x5e, 0x7b, 0xb1, 0x5b, 0xf7, 0x39, 0x09, 0xb6, 0x12, 0x94, 0x78, 0xb1, 0xef,
+	0x3e, 0x4a, 0xfa, 0xee, 0x79, 0x86, 0x28, 0x05, 0x7d, 0x40, 0x1a, 0x8f, 0xa8, 0x4d, 0x58, 0x74,
+	0x91, 0xea, 0x61, 0x3b, 0x24, 0x28, 0x7c, 0x93, 0xff, 0xaa, 0x42, 0x2b, 0x13, 0xb1, 0x9e, 0x83,
+	0x6d, 0x0f, 0x65, 0x64, 0x5c, 0xc3, 0x16, 0xb3, 0x72, 0xec, 0xd2, 0x6f, 0xc6, 0x6a, 0xe8, 0x99,
+	0x30, 0x0a, 0x0e, 0xb8, 0x3c, 0xa4, 0xbc, 0x38, 0xac, 0x28, 0x2d, 0x22, 0x70, 0x30, 0x4f, 0x87,
+	0x1b, 0x1a, 0xd5, 0xae, 0x17, 0xeb, 0x60, 0x04, 0x70, 0x74, 0xb0, 0xad, 0x17, 0x8f, 0x7c, 0x2e,
+	0xbc, 0xa9, 0x45, 0xe4, 0x37, 0xb0, 0x7b, 0xa1, 0xda, 0x1a, 0xb2, 0x98, 0xfe, 0xa2, 0xac, 0x15,
+	0xd1, 0x78, 0x01, 0x5b, 0x69, 0x11, 0x54, 0xb0, 0x35, 0x87, 0x2f, 0x7e, 0xad, 0xc2, 0x9e, 0xe8,
+	0x38, 0x02, 0x97, 0xdc, 0xc2, 0x36, 0xf3, 0xc0, 0x38, 0xe2, 0x4d, 0x63, 0x9a, 0x43, 0xa7, 0x1c,
+	0xce, 0x10, 0x26, 0x3c, 0xe7, 0xb0, 0xa2, 0x6c, 0xa9, 0xa2, 0xcd, 0x04, 0x69, 0x3d, 0xd8, 0xbc,
+	0x22, 0xaa, 0x4b, 0x2e, 0x5d, 0xe4, 0xa8, 0xae, 0x69, 0x1b, 0x0c, 0x9c, 0x3e, 0x9d, 0x7c, 0x0c,
+	0xed, 0x0c, 0x28, 0xf8, 0x34, 0x4b, 0x8a, 0x7c, 0x02, 0x5b, 0x17, 0x78, 0xe2, 0x58, 0x88, 0xa0,
+	0x62, 0xc1, 0x7f, 0x54, 0xa1, 0xc9, 0x36, 0xdf, 0x22, 0x43, 0x3a, 0x84, 0x15, 0x0f, 0x4f, 0x5d,
+	0x0d, 0xa5, 0x0b, 0xd6, 0x13, 0xba, 0xcc, 0x8a, 0x96, 0x0c, 0x4f, 0xfc, 0x34, 0x8c, 0x51, 0xd4,
+	0x01, 0x4d, 0x7f, 0x31, 0x5b, 0xd8, 0xea, 0x05, 0xa5, 0xe0, 0x14, 0xa4, 0x6c, 0x12, 0x07, 0x05,
+	0xe4, 0xb1, 0xb2, 0x9a, 0xce, 0x61, 0x51, 0x19, 0x6c, 0x88, 0xca, 0xe0, 0x25, 0xac, 0x32, 0x13,
+	0x29, 0x21, 0x9c, 0x48, 0x3a, 0x85, 0x05, 0x0b, 0x19, 0x5e, 0xbb, 0x16, 0x14, 0xa1, 0x36, 0x37,
+	0x31, 0xde, 0x22, 0x43, 0x09, 0x50, 0xf2, 0x08, 0xf6, 0x03, 0xf6, 0x43, 0xa7, 0x9a, 0xb6, 0xc1,
+	0x04, 0x8b, 0x88, 0x16, 0x86, 0xea, 0x57, 0xf0, 0x4c, 0x2c, 0x45, 0xe0, 0x62, 0xa1, 0xb0, 0xcf,
+	0x40, 0x66, 0xae, 0x2f, 0x7f, 0x34, 0x3f, 0x60, 0xd2, 0x18, 0x61, 0xca, 0xc5, 0xa6, 0xe3, 0x89,
+	0x83, 0x6c, 0x4f, 0x25, 0xa6, 0x6d, 0xbc, 0x56, 0x4d, 0xeb, 0x61, 0xa6, 0xcf, 0x7e, 0x19, 0xcb,
+	0xc4, 0xf6, 0xbf, 0x31, 0xbd, 0xf4, 0xd1, 0xe4, 0x2e, 0x2c, 0xb3, 0x3d, 0x8a, 0xcc, 0x20, 0x8e,
+	0xa0, 0xc5, 0xec, 0x9d, 0x98, 0x84, 0xe4, 0xe5, 0xd2, 0x09, 0x6c, 0x25, 0x2c, 0x09, 0xd1, 0xa2,
+	0x2c, 0xed, 0xc2, 0x32, 0x05, 0x09, 0xc5, 0x99, 0xb0, 0x96, 0x12, 0xc7, 0xa1, 0x23, 0xdd, 0x44,
+	0x6b, 0x0f, 0x69, 0xa2, 0xf2, 0x21, 0x6c, 0x04, 0xe7, 0xbc, 0x22, 0xaa, 0x91, 0x67, 0x21, 0x2d,
+	0x58, 0x46, 0x89, 0x22, 0x74, 0x04, 0x2d, 0xe6, 0x8e, 0x22, 0xa1, 0x09, 0x1f, 0xf8, 0x50, 0x8e,
+	0xb0, 0x3e, 0xec, 0x5c, 0x60, 0xfb, 0xc6, 0x74, 0x27, 0x14, 0x50, 0xd0, 0x5b, 0xe4, 0x67, 0xb0,
+	0x12, 0x25, 0x3c, 0xb2, 0x75, 0xd3, 0x36, 0x32, 0x10, 0xbf, 0x5f, 0xf1, 0x45, 0xce, 0xdf, 0xf6,
+	0x45, 0x92, 0x04, 0x9d, 0x66, 0x04, 0xab, 0x51, 0x83, 0x71, 0xe8, 0xf1, 0xc2, 0xf6, 0xb2, 0xc3,
+	0x75, 0x5b, 0x68, 0xc2, 0xb0, 0xa2, 0xac, 0x90, 0x94, 0x55, 0x53, 0xe8, 0x6a, 0x54, 0xf7, 0x38,
+	0xb8, 0xc7, 0x24, 0x5a, 0x57, 0xaa, 0xd5, 0x1f, 0xcf, 0x88, 0xce, 0x35, 0x7d, 0x58, 0x51, 0x76,
+	0xb5, 0x3c, 0x40, 0xa2, 0x83, 0xbd, 0x82, 0x6d, 0x5a, 0x2a, 0x4a, 0x39, 0x46, 0x48, 0xe2, 0x1b,
+	0xd8, 0x4d, 0xd5, 0xd3, 0x59, 0x79, 0xa5, 0x05, 0x8d, 0x60, 0x5f, 0x24, 0x63, 0xde, 0x82, 0x72,
+	0x0e, 0xdd, 0x6c, 0x2d, 0xcd, 0x3f, 0x96, 0xfc, 0x79, 0x22, 0x65, 0xe7, 0xbe, 0xb4, 0xbc, 0x86,
+	0x1d, 0x3e, 0x97, 0x73, 0x46, 0xe4, 0xdf, 0x55, 0x91, 0x20, 0x41, 0x40, 0xbe, 0x03, 0x49, 0x78,
+	0xe3, 0xd9, 0xe3, 0x86, 0x64, 0xf2, 0xa6, 0xb3, 0x46, 0x32, 0x16, 0xbb, 0xb0, 0x4f, 0xe5, 0x14,
+	0x45, 0xe5, 0xd1, 0x6c, 0x54, 0xe6, 0x58, 0x3f, 0xac, 0x28, 0x3b, 0x5a, 0xce, 0x7e, 0x22, 0x26,
+	0x4f, 0xa1, 0x73, 0x89, 0x3d, 0x12, 0xe6, 0x48, 0x51, 0xad, 0x78, 0x05, 0xdb, 0x5c, 0xf4, 0x9c,
+	0xa4, 0xff, 0x59, 0x15, 0xc8, 0x29, 0xc3, 0x39, 0xab, 0xee, 0xf9, 0x9c, 0x33, 0xd4, 0x0c, 0xe7,
+	0x6c, 0x51, 0xc2, 0xb0, 0xe7, 0x60, 0x8f, 0xb0, 0x8a, 0x22, 0xa4, 0xbc, 0x37, 0x23, 0x3c, 0xc7,
+	0xf4, 0x61, 0x45, 0xd9, 0x76, 0xc4, 0xdb, 0x09, 0xc2, 0xef, 0xa3, 0x51, 0x5d, 0x41, 0x77, 0xc8,
+	0xf5, 0x54, 0x4b, 0x94, 0xff, 0xfb, 0x10, 0xcd, 0xfe, 0xf1, 0x9d, 0x11, 0xd8, 0xd2, 0x28, 0x49,
+	0x6f, 0x3d, 0x49, 0x6f, 0x3c, 0xb5, 0x2d, 0x24, 0xa7, 0xb6, 0x9f, 0x6a, 0xd0, 0x4a, 0xa9, 0x14,
+	0xce, 0xb7, 0x85, 0xaa, 0xcb, 0xdf, 0x56, 0xd3, 0x3d, 0x77, 0xe1, 0xbf, 0x1c, 0x5c, 0x1b, 0x85,
+	0x83, 0xeb, 0x62, 0x92, 0x82, 0xeb, 0x0c, 0x03, 0xc2, 0xd0, 0x7d, 0x28, 0xf9, 0xc9, 0xc9, 0x36,
+	0xd6, 0x25, 0x9e, 0x6c, 0xdd, 0x10, 0x53, 0x6e, 0xb2, 0x15, 0xf8, 0xcf, 0x9f, 0x3a, 0x5d, 0x81,
+	0x6b, 0x79, 0x3a, 0x72, 0x27, 0x5b, 0x01, 0x43, 0x1c, 0x1d, 0xd9, 0xe8, 0x3e, 0xff, 0xa5, 0x11,
+	0xdf, 0x26, 0xae, 0x90, 0x7b, 0x67, 0x6a, 0x48, 0xfa, 0x0e, 0x56, 0x52, 0xa3, 0xbe, 0xf4, 0x71,
+	0x4a, 0x23, 0xef, 0xd7, 0x55, 0xe7, 0x20, 0x1f, 0x44, 0x39, 0x95, 0x2b, 0x92, 0x07, 0x9b, 0xfc,
+	0xf1, 0x55, 0x3a, 0xe6, 0x54, 0x4c, 0xc1, 0xc8, 0xdd, 0x39, 0x29, 0x85, 0x8d, 0x94, 0xc6, 0x46,
+	0x31, 0xbe, 0xf8, 0x46, 0xa5, 0xd8, 0xec, 0x1c, 0xe4, 0x83, 0x22, 0xf9, 0x0e, 0x3c, 0xe5, 0xde,
+	0x3b, 0xa4, 0xa3, 0x32, 0x77, 0x13, 0xaa, 0xab, 0xd4, 0x35, 0x26, 0xd2, 0x38, 0x81, 0x0d, 0x5e,
+	0x4f, 0x91, 0x7a, 0x25, 0xda, 0x0e, 0xd5, 0x57, 0xa6, 0x41, 0x45, 0xea, 0x3e, 0xc0, 0x3a, 0xa7,
+	0x9e, 0x4a, 0x9f, 0x14, 0x57, 0x5c, 0xaa, 0xac, 0x44, 0x69, 0x66, 0xba, 0x5e, 0x7c, 0xf9, 0xed,
+	0x17, 0x86, 0x49, 0x6e, 0xa7, 0xd7, 0x7d, 0x0d, 0x4f, 0x06, 0xb6, 0x3a, 0x41, 0x16, 0xf2, 0x3c,
+	0x1b, 0xfb, 0xd5, 0x82, 0xfe, 0x48, 0x1d, 0xdf, 0x58, 0xf8, 0x7e, 0x60, 0xe0, 0x81, 0x81, 0xec,
+	0x41, 0xf0, 0x53, 0x75, 0x90, 0xf8, 0x27, 0x7b, 0xbd, 0x18, 0x2c, 0x7d, 0xfa, 0xcf, 0x00, 0xd0,
+	0x7f, 0xc2, 0x09, 0xa9, 0x15, 0x00, 0x00,
 }

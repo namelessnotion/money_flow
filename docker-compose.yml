@@ -58,9 +58,13 @@ services:
       DATABASE_URL: postgres://money_flow:money_flow@postgres:5432/money_flow_dev?sslmode=disable
       DB_HOST: postgres
       LISTEN_ADDR: ":8080"
+      TIGERBEETLE_ADDRESS: tigerbeetle:3000
+      TIGERBEETLE_CLUSTER_ID: "0"
     depends_on:
       postgres:
         condition: service_healthy
+      tigerbeetle:
+        condition: service_started
     ports:
       - "8080:8080"
     volumes:
