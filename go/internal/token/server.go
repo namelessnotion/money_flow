@@ -86,9 +86,13 @@ func Minted(ctx context.Context, store eventstore.Store, tokenID string) (*pb.To
 // the Wallet write's ExpectedSeq. Callers that also need the Wallet's
 // existing Token ids (e.g. transfer's source-Token selection) already have
 // this stream loaded for that purpose and can reuse it here for free.
+//
+// transactionID tags every minted Token's TokenMintedForWallet record with
+// its owning Transaction, if any (empty for a Token minted outside any
+// Transaction) — see wallet.TokensOfVisibleTo.
 func MintWrites(
 	ctx context.Context, store eventstore.Store, lc ledger.Client,
-	walletID string, walletEvents []eventstore.Event, specs []MintSpec,
+	walletID string, walletEvents []eventstore.Event, specs []MintSpec, transactionID string,
 ) ([]eventstore.StreamWrite, *pb.TokenMintRejected, error) {
 	if len(walletEvents) == 0 {
 		return nil, &pb.TokenMintRejected{
@@ -143,7 +147,7 @@ func MintWrites(
 			AggregateType: AggregateType, AggregateID: spec.TokenID, ExpectedSeq: 0,
 			Events: []proto.Message{&pb.TokenMinted{Id: spec.TokenID, WalletId: walletID, Capacity: spec.Capacity}},
 		})
-		walletTokenEvents[i] = wallet.TokenMintedForWalletEvent(walletID, spec.TokenID, spec.Capacity)
+		walletTokenEvents[i] = wallet.TokenMintedForWalletEvent(walletID, spec.TokenID, spec.Capacity, transactionID)
 	}
 	writes = append(writes, eventstore.StreamWrite{
 		AggregateType: wallet.AggregateType, AggregateID: walletID, ExpectedSeq: int64(len(walletEvents)),
@@ -190,7 +194,7 @@ func (s *Server) Mint(ctx context.Context, req *pb.MintRequest) (*pb.MintRespons
 		}
 
 		writes, rejection, err := MintWrites(ctx, s.store, s.ledger, req.GetWalletId(), walletEvents,
-			[]MintSpec{{TokenID: req.GetId(), Capacity: req.GetCapacity()}})
+			[]MintSpec{{TokenID: req.GetId(), Capacity: req.GetCapacity()}}, "")
 		if err != nil {
 			return nil, err
 		}

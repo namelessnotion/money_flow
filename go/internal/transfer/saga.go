@@ -2,7 +2,6 @@ package transfer
 
 import (
 	"context"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 
@@ -14,6 +13,7 @@ import (
 	operationpb "github.com/namelessnotion/money_flow/go/gen/proto/operation/v1"
 	sharedpb "github.com/namelessnotion/money_flow/go/gen/proto/shared/v1"
 	pb "github.com/namelessnotion/money_flow/go/gen/proto/transfer/v1"
+	"github.com/namelessnotion/money_flow/go/internal/detid"
 	"github.com/namelessnotion/money_flow/go/internal/eventstore"
 	"github.com/namelessnotion/money_flow/go/internal/ledger"
 	"github.com/namelessnotion/money_flow/go/internal/operation"
@@ -101,6 +101,84 @@ func currentState(events []eventstore.Event) transferState {
 	return state
 }
 
+// OutcomeKind is a coarse, exported summary of a Transfer's (or Reversal's)
+// current state — the read-only cross-aggregate view Transaction's saga
+// needs to reconcile an in-flight child or pick a rollback action, without
+// exposing transfer's own unexported transferState enum.
+type OutcomeKind int
+
+const (
+	OutcomeNotFound OutcomeKind = iota
+	OutcomeRejected
+	OutcomeInFlight // Accepted or Prepared
+	OutcomeStaged
+	OutcomePending
+	OutcomeCommitted
+	OutcomeFailed
+	OutcomeCancelled
+)
+
+func (o OutcomeKind) String() string {
+	switch o {
+	case OutcomeNotFound:
+		return "not_found"
+	case OutcomeRejected:
+		return "rejected"
+	case OutcomeInFlight:
+		return "in_flight"
+	case OutcomeStaged:
+		return "staged"
+	case OutcomePending:
+		return "pending"
+	case OutcomeCommitted:
+		return "committed"
+	case OutcomeFailed:
+		return "failed"
+	case OutcomeCancelled:
+		return "cancelled"
+	default:
+		return "unknown"
+	}
+}
+
+// Outcome folds transferID's own stream (a Transfer's or a Reversal's — same
+// aggregate type) into a coarse, exported summary. Read-only: it never
+// drives the saga forward, only reports where the stream currently stands.
+// A rejected request never advances past its first event, so it is checked
+// for directly rather than through currentState, which has no vocabulary
+// for it at all — a rejection is a terminal outcome unrelated to the saga's
+// own accepted-through-committed progression.
+func Outcome(ctx context.Context, store eventstore.Store, transferID string) (OutcomeKind, error) {
+	events, err := store.Load(ctx, AggregateType, transferID)
+	if err != nil {
+		return OutcomeNotFound, twirp.InternalErrorWith(err)
+	}
+	if len(events) == 0 {
+		return OutcomeNotFound, nil
+	}
+	switch events[0].EventType {
+	case eventstore.EventType(&pb.TransferRequestRejected{}), eventstore.EventType(&pb.ReversalRequestRejected{}):
+		return OutcomeRejected, nil
+	}
+
+	switch currentState(events) {
+	case stateAccepted, statePrepared:
+		return OutcomeInFlight, nil
+	case stateStaged:
+		return OutcomeStaged, nil
+	case statePending:
+		return OutcomePending, nil
+	case stateCommitted:
+		return OutcomeCommitted, nil
+	case stateFailed:
+		return OutcomeFailed, nil
+	case stateCancelled:
+		return OutcomeCancelled, nil
+	default:
+		return OutcomeNotFound, nil
+	}
+}
+
 // stageRequested reads the stage flag off a Transfer's (or Reversal's)
 // Accepted event — the one place that fact is durably recorded, so every
 // resume from the event log (not just the original synchronous call) can
@@ -118,22 +196,6 @@ func stageRequested(events []eventstore.Event) (bool, error) {
 	default:
 		return false, fmt.Errorf("transfer: stream starts with %s, want an Accepted event", events[0].EventType)
 	}
-}
-
-// derivedID produces a stable, deterministic, validly-formed UUID from an
-// arbitrary seed — used to give TigerBeetle's post_pending_transfer and
-// void_pending_transfer entries their own id, distinct from (but
-// reproducibly derived from) the DEBIT Operation id whose reservation
-// they're resolving, so a retried commit()/cancelStaged() resubmits the
-// identical id and converges via TigerBeetle's own Exists idempotency
-// rather than generating a fresh one each attempt.
-func derivedID(seed string) string {
-	sum := sha256.Sum256([]byte(seed))
-	var u uuid.UUID
-	copy(u[:], sum[:16])
-	u[6] = (u[6] & 0x0f) | 0x40
-	u[8] = (u[8] & 0x3f) | 0x80
-	return u.String()
 }
 
 // preparedLegs returns the leg manifest TransferPrepared recorded for
@@ -289,12 +351,51 @@ func (s *Server) prepare(ctx context.Context, transferID string) error {
 
 	switch accepted := msg.(type) {
 	case *pb.TransferRequestAccepted:
-		srcLegs, rejection, err := selectSourceTokens(ctx, s.store, s.ledger, accepted.GetFromWalletId(), accepted.GetAmount())
-		if err != nil {
-			return err
-		}
-		if rejection != nil {
-			return fmt.Errorf("transfer %q: prepare: re-selection failed after accept: %s", transferID, rejection.GetReason())
+		var srcLegs []Leg
+		var srcMintWrites []eventstore.StreamWrite
+
+		if accepted.GetMintSource() {
+			// Re-validate the same way selectSourceTokens is re-validated
+			// below, in case anything changed between accept and prepare —
+			// defensive, mirroring the existing "re-selection failed after
+			// accept" pattern.
+			rejection, err := validateMintSource(ctx, s.store, s.transactionExists, accepted.GetTransactionId(), accepted.GetFromWalletId())
+			if err != nil {
+				return err
+			}
+			if rejection != nil {
+				return fmt.Errorf("transfer %q: prepare: mint_source re-validation failed after accept: %s", transferID, rejection.GetReason())
+			}
+
+			srcSpec := mintSourceLeg(accepted.GetAmount())
+			srcWalletEvents, err := s.store.Load(ctx, wallet.AggregateType, accepted.GetFromWalletId())
+			if err != nil {
+				return twirp.InternalErrorWith(err)
+			}
+			writes, mintRejection, err := token.MintWrites(
+				ctx, s.store, s.ledger, accepted.GetFromWalletId(), srcWalletEvents,
+				[]token.MintSpec{srcSpec}, accepted.GetTransactionId(),
+			)
+			if err != nil {
+				return err
+			}
+			if mintRejection != nil {
+				return fmt.Errorf("transfer %q: prepare: source mint rejected: %s", transferID, mintRejection.GetReason())
+			}
+			srcMintWrites = writes
+			srcLegs = []Leg{{SourceTokenID: srcSpec.TokenID, Amount: accepted.GetAmount()}}
+		} else {
+			selected, rejection, err := selectSourceTokens(
+				ctx, s.store, s.ledger, accepted.GetFromWalletId(), accepted.GetAmount(),
+				accepted.GetTransactionId(), s.isOpen,
+			)
+			if err != nil {
+				return err
+			}
+			if rejection != nil {
+				return fmt.Errorf("transfer %q: prepare: re-selection failed after accept: %s", transferID, rejection.GetReason())
+			}
+			srcLegs = selected
 		}
 
 		destSpecs := planDestinations(accepted.GetAmount())
@@ -302,14 +403,16 @@ func (s *Server) prepare(ctx context.Context, transferID string) error {
 		if err != nil {
 			return twirp.InternalErrorWith(err)
 		}
-		writes, mintRejection, err := token.MintWrites(ctx, s.store, s.ledger, accepted.GetToWalletId(), walletEvents, destSpecs)
+		writes, mintRejection, err := token.MintWrites(
+			ctx, s.store, s.ledger, accepted.GetToWalletId(), walletEvents, destSpecs, accepted.GetTransactionId(),
+		)
 		if err != nil {
 			return err
 		}
 		if mintRejection != nil {
 			return fmt.Errorf("transfer %q: prepare: mint rejected: %s", transferID, mintRejection.GetReason())
 		}
-		mintWrites = writes
+		mintWrites = append(srcMintWrites, writes...)
 
 		destTokenID := destSpecs[0].TokenID
 		for i := range srcLegs {
@@ -468,7 +571,7 @@ func (s *Server) commit(ctx context.Context, transferID string) error {
 			Linked: i < len(legs)-1,
 		}
 		if posting {
-			t.ID = derivedID(leg.GetDebitOperationId() + ":post")
+			t.ID = detid.New(leg.GetDebitOperationId() + ":post")
 			t.Kind = ledger.TransferKindPostPending
 			t.PendingID = leg.GetDebitOperationId()
 		} else {
@@ -508,7 +611,7 @@ func (s *Server) cancelStaged(ctx context.Context, transferID, reason string) er
 	batch := make([]ledger.Transfer, len(legs))
 	for i, leg := range legs {
 		batch[i] = ledger.Transfer{
-			ID:             derivedID(leg.GetDebitOperationId() + ":void"),
+			ID:             detid.New(leg.GetDebitOperationId() + ":void"),
 			DebitAccountID: leg.GetSourceTokenId(), CreditAccountID: leg.GetDestTokenId(),
 			MinorUnits: leg.GetAmount().GetMinorUnits(), Currency: leg.GetAmount().GetCurrency(),
 			Kind: ledger.TransferKindVoidPending, PendingID: leg.GetDebitOperationId(),

@@ -36,12 +36,20 @@ type Leg struct {
 // alternative (e.g. largest-balance-first, to minimize the number of legs)
 // is easy to substitute here without touching anything else.
 //
+// callingTransactionID and isOpen thread through to wallet.TokensOfVisibleTo
+// so a Token tagged with a different, still-open Transaction is invisible to
+// this selection — the mechanism that keeps a Transaction's own compensation
+// from racing a later, unrelated caller that spends the same Token down
+// first. callingTransactionID is empty and isOpen is nil for a standalone
+// Transfer, which degrades to the old unfiltered behavior.
+//
 // Returns a domain rejection, not an error, when the Wallet's total existing
 // Token capacity can't cover amount.
 func selectSourceTokens(
 	ctx context.Context, store eventstore.Store, lc ledger.Client, walletID string, amount *sharedpb.Money,
+	callingTransactionID string, isOpen wallet.TransactionOpenChecker,
 ) ([]Leg, *pb.TransferRequestRejected, error) {
-	tokenIDs, err := wallet.TokensOf(ctx, store, walletID)
+	tokenIDs, err := wallet.TokensOfVisibleTo(ctx, store, walletID, callingTransactionID, isOpen)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -91,6 +99,72 @@ func selectSourceTokens(
 // no "max capacity per Token" splitting rule is needed here.
 func planDestinations(amount *sharedpb.Money) []token.MintSpec {
 	return []token.MintSpec{{TokenID: uuid.NewV7().String(), Capacity: amount}}
+}
+
+// mintSourceLeg builds the MintSpec for a mint_source=true request's sole
+// source Token: a brand-new Token minted for the full amount, used directly
+// as the DEBIT leg once its stream is created — the mint_source counterpart
+// to selectSourceTokens's existing-balance FIFO path. Pure — no I/O, same
+// reason planDestinations is pure — the actual TigerBeetle account and
+// event writes happen when the caller passes this spec into
+// token.MintWrites. No balance check here: the debit that follows is
+// expected to drive this fresh, zero-balance Token negative, which is
+// exactly what the source Wallet's Allows-derived account flags (validated
+// by validateMintSource) exist to legally permit.
+func mintSourceLeg(amount *sharedpb.Money) token.MintSpec {
+	return token.MintSpec{TokenID: uuid.NewV7().String(), Capacity: amount}
+}
+
+// TransactionExistsChecker reports whether transactionID names a real,
+// already-initialized Transaction. Used only to authorize mint_source=true
+// requests — a transaction_id claim that doesn't resolve to an actual
+// Transaction stream must not be allowed to mint fresh money into the
+// ledger. Distinct from wallet.TransactionOpenChecker (which asks whether a
+// TAGGED Token's owning Transaction has closed, defaulting to "still open"
+// on a not-found stream as a conservative fail-safe): here, "not found"
+// must mean reject, the opposite bias, so the two questions are kept as
+// separate checkers rather than one overloaded function.
+type TransactionExistsChecker func(ctx context.Context, transactionID string) (bool, error)
+
+// validateMintSource authorizes a mint_source=true request: transactionID
+// must name a real, existing Transaction (mint_source is Transaction-only —
+// a standalone Transfer can never reach this function at all, since
+// RequestTransfer refuses mint_source=true without a transaction_id before
+// any store read), and walletID must exist with an Allows policy that
+// includes ONRAMP (mint_source is how money enters the ledger, so it is
+// only ever legal against a Wallet the business has explicitly marked as a
+// funding instrument's boundary). Returns a domain rejection, not an error,
+// for either failure — the same shape selectSourceTokens's
+// insufficient-capacity rejection already takes. Called both at accept time
+// and again in prepare(), mirroring selectSourceTokens's own existing
+// re-check there.
+func validateMintSource(
+	ctx context.Context, store eventstore.Store, transactionExists TransactionExistsChecker,
+	transactionID, walletID string,
+) (*pb.TransferRequestRejected, error) {
+	exists, err := transactionExists(ctx, transactionID)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return &pb.TransferRequestRejected{Reason: fmt.Sprintf("transaction %q not found", transactionID)}, nil
+	}
+
+	opened, err := wallet.Opened(ctx, store, walletID)
+	if err != nil {
+		return nil, err
+	}
+	if opened == nil {
+		return &pb.TransferRequestRejected{Reason: fmt.Sprintf("wallet %q not found", walletID)}, nil
+	}
+	switch opened.GetAllows() {
+	case sharedpb.Allows_ALLOWS_ONRAMP, sharedpb.Allows_ALLOWS_ONRAMP_AND_OFFRAMP:
+		return nil, nil
+	default:
+		return &pb.TransferRequestRejected{Reason: fmt.Sprintf(
+			"wallet %q does not allow onramp; mint_source requires ALLOWS_ONRAMP or ALLOWS_ONRAMP_AND_OFFRAMP", walletID,
+		)}, nil
+	}
 }
 
 // reversalManifest derives a reversal's legs from the original Transfer's

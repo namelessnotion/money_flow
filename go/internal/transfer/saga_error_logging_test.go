@@ -41,7 +41,7 @@ func TestRequestTransfer_LogsSwallowedSagaErrors(t *testing.T) {
 	fundToken(t, lc, testutil.ID("t1"), 1000)
 
 	failing := &failingAppendAtomicStore{Store: store, err: errors.New("boom: store unavailable")}
-	server := NewServer(failing, lc)
+	server := NewServer(failing, lc, nil, nil)
 
 	var logBuf bytes.Buffer
 	log.SetOutput(&logBuf)

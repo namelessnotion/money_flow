@@ -22,74 +22,146 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type Memo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
+type RollbackMethod int32
 
-func (x *Memo) Reset() {
-	*x = Memo{}
-	mi := &file_transaction_v1_transaction_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
+const (
+	RollbackMethod_ROLLBACK_METHOD_UNSPECIFIED RollbackMethod = 0
+	RollbackMethod_ROLLBACK_METHOD_REVERSED    RollbackMethod = 1 // child was Committed -> RequestReversal
+	RollbackMethod_ROLLBACK_METHOD_CANCELLED   RollbackMethod = 2 // child was Accepted/Prepared/Staged/Pending -> Cancel*Transfer
+	RollbackMethod_ROLLBACK_METHOD_ABANDONED   RollbackMethod = 3 // child was only Gated, never requested -> nothing to call
+)
 
-func (x *Memo) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Memo) ProtoMessage() {}
-
-func (x *Memo) ProtoReflect() protoreflect.Message {
-	mi := &file_transaction_v1_transaction_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
+// Enum value maps for RollbackMethod.
+var (
+	RollbackMethod_name = map[int32]string{
+		0: "ROLLBACK_METHOD_UNSPECIFIED",
+		1: "ROLLBACK_METHOD_REVERSED",
+		2: "ROLLBACK_METHOD_CANCELLED",
+		3: "ROLLBACK_METHOD_ABANDONED",
 	}
-	return mi.MessageOf(x)
+	RollbackMethod_value = map[string]int32{
+		"ROLLBACK_METHOD_UNSPECIFIED": 0,
+		"ROLLBACK_METHOD_REVERSED":    1,
+		"ROLLBACK_METHOD_CANCELLED":   2,
+		"ROLLBACK_METHOD_ABANDONED":   3,
+	}
+)
+
+func (x RollbackMethod) Enum() *RollbackMethod {
+	p := new(RollbackMethod)
+	*p = x
+	return p
 }
 
-// Deprecated: Use Memo.ProtoReflect.Descriptor instead.
-func (*Memo) Descriptor() ([]byte, []int) {
+func (x RollbackMethod) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RollbackMethod) Descriptor() protoreflect.EnumDescriptor {
+	return file_transaction_v1_transaction_proto_enumTypes[0].Descriptor()
+}
+
+func (RollbackMethod) Type() protoreflect.EnumType {
+	return &file_transaction_v1_transaction_proto_enumTypes[0]
+}
+
+func (x RollbackMethod) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RollbackMethod.Descriptor instead.
+func (RollbackMethod) EnumDescriptor() ([]byte, []int) {
 	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Memo) GetId() string {
-	if x != nil {
-		return x.Id
+type TransactionState int32
+
+const (
+	TransactionState_TRANSACTION_STATE_UNSPECIFIED      TransactionState = 0
+	TransactionState_TRANSACTION_STATE_INITIALIZED      TransactionState = 1
+	TransactionState_TRANSACTION_STATE_STARTED          TransactionState = 2
+	TransactionState_TRANSACTION_STATE_ROLLBACK_STARTED TransactionState = 3
+	TransactionState_TRANSACTION_STATE_COMPLETED        TransactionState = 4
+	TransactionState_TRANSACTION_STATE_ROLLED_BACK      TransactionState = 5
+	TransactionState_TRANSACTION_STATE_ROLLBACK_FAILED  TransactionState = 6
+	TransactionState_TRANSACTION_STATE_REJECTED         TransactionState = 7
+)
+
+// Enum value maps for TransactionState.
+var (
+	TransactionState_name = map[int32]string{
+		0: "TRANSACTION_STATE_UNSPECIFIED",
+		1: "TRANSACTION_STATE_INITIALIZED",
+		2: "TRANSACTION_STATE_STARTED",
+		3: "TRANSACTION_STATE_ROLLBACK_STARTED",
+		4: "TRANSACTION_STATE_COMPLETED",
+		5: "TRANSACTION_STATE_ROLLED_BACK",
+		6: "TRANSACTION_STATE_ROLLBACK_FAILED",
+		7: "TRANSACTION_STATE_REJECTED",
 	}
-	return ""
+	TransactionState_value = map[string]int32{
+		"TRANSACTION_STATE_UNSPECIFIED":      0,
+		"TRANSACTION_STATE_INITIALIZED":      1,
+		"TRANSACTION_STATE_STARTED":          2,
+		"TRANSACTION_STATE_ROLLBACK_STARTED": 3,
+		"TRANSACTION_STATE_COMPLETED":        4,
+		"TRANSACTION_STATE_ROLLED_BACK":      5,
+		"TRANSACTION_STATE_ROLLBACK_FAILED":  6,
+		"TRANSACTION_STATE_REJECTED":         7,
+	}
+)
+
+func (x TransactionState) Enum() *TransactionState {
+	p := new(TransactionState)
+	*p = x
+	return p
 }
 
-func (x *Memo) GetValue() string {
-	if x != nil {
-		return x.Value
-	}
-	return ""
+func (x TransactionState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TransactionState) Descriptor() protoreflect.EnumDescriptor {
+	return file_transaction_v1_transaction_proto_enumTypes[1].Descriptor()
+}
+
+func (TransactionState) Type() protoreflect.EnumType {
+	return &file_transaction_v1_transaction_proto_enumTypes[1]
+}
+
+func (x TransactionState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TransactionState.Descriptor instead.
+func (TransactionState) EnumDescriptor() ([]byte, []int) {
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{1}
 }
 
 // NOTE: When we say Transfer inside of Transaction we are referring to this message,
 // which eventual can be used to effectively map to the Root Aggregate Transfer.
 type Transfer struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Amount        *v1.Money              `protobuf:"bytes,2,opt,name=amount,proto3" json:"amount,omitempty"`
-	FromWalletId  string                 `protobuf:"bytes,3,opt,name=from_wallet_id,json=fromWalletId,proto3" json:"from_wallet_id,omitempty"`
-	ToWalletId    string                 `protobuf:"bytes,4,opt,name=to_wallet_id,json=toWalletId,proto3" json:"to_wallet_id,omitempty"`
-	AutoProcess   bool                   `protobuf:"varint,5,opt,name=auto_process,json=autoProcess,proto3" json:"auto_process,omitempty"` // automatically process or wait for external StartProcessing
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Id           string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Amount       *v1.Money              `protobuf:"bytes,2,opt,name=amount,proto3" json:"amount,omitempty"`
+	FromWalletId string                 `protobuf:"bytes,3,opt,name=from_wallet_id,json=fromWalletId,proto3" json:"from_wallet_id,omitempty"`
+	ToWalletId   string                 `protobuf:"bytes,4,opt,name=to_wallet_id,json=toWalletId,proto3" json:"to_wallet_id,omitempty"`
+	AutoProcess  bool                   `protobuf:"varint,5,opt,name=auto_process,json=autoProcess,proto3" json:"auto_process,omitempty"` // automatically process or wait for external StartProcessing
+	// Echoes RequestTransferRequest.stage for this child — Transaction has no
+	// opinion of its own on staging, it just passes the caller's choice through.
+	Stage bool `protobuf:"varint,6,opt,name=stage,proto3" json:"stage,omitempty"`
+	// Echoes RequestTransferRequest.mint_source (see transfer.proto) — set true
+	// for a child whose from_wallet_id is a funding/control wallet with no
+	// persistent selectable balance (e.g. Bank Account, Bank Control), so
+	// prepare() mints a fresh source Token for this leg instead of FIFO-selecting.
+	MintSource    bool `protobuf:"varint,7,opt,name=mint_source,json=mintSource,proto3" json:"mint_source,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Transfer) Reset() {
 	*x = Transfer{}
-	mi := &file_transaction_v1_transaction_proto_msgTypes[1]
+	mi := &file_transaction_v1_transaction_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -101,7 +173,7 @@ func (x *Transfer) String() string {
 func (*Transfer) ProtoMessage() {}
 
 func (x *Transfer) ProtoReflect() protoreflect.Message {
-	mi := &file_transaction_v1_transaction_proto_msgTypes[1]
+	mi := &file_transaction_v1_transaction_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -114,7 +186,7 @@ func (x *Transfer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Transfer.ProtoReflect.Descriptor instead.
 func (*Transfer) Descriptor() ([]byte, []int) {
-	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{1}
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Transfer) GetId() string {
@@ -152,34 +224,103 @@ func (x *Transfer) GetAutoProcess() bool {
 	return false
 }
 
+func (x *Transfer) GetStage() bool {
+	if x != nil {
+		return x.Stage
+	}
+	return false
+}
+
+func (x *Transfer) GetMintSource() bool {
+	if x != nil {
+		return x.MintSource
+	}
+	return false
+}
+
+type TransferIdList struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TransferId    []string               `protobuf:"bytes,1,rep,name=transfer_id,json=transferId,proto3" json:"transfer_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TransferIdList) Reset() {
+	*x = TransferIdList{}
+	mi := &file_transaction_v1_transaction_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransferIdList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransferIdList) ProtoMessage() {}
+
+func (x *TransferIdList) ProtoReflect() protoreflect.Message {
+	mi := &file_transaction_v1_transaction_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransferIdList.ProtoReflect.Descriptor instead.
+func (*TransferIdList) Descriptor() ([]byte, []int) {
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *TransferIdList) GetTransferId() []string {
+	if x != nil {
+		return x.TransferId
+	}
+	return nil
+}
+
 // Command to build out a Financial Transaction
-type StartInitializingTransaction struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ExternalGuid   string                 `protobuf:"bytes,2,opt,name=external_guid,json=externalGuid,proto3" json:"external_guid,omitempty"`
-	FactoryName    string                 `protobuf:"bytes,3,opt,name=factory_name,json=factoryName,proto3" json:"factory_name,omitempty"`
-	FactoryVersion string                 `protobuf:"bytes,4,opt,name=factory_version,json=factoryVersion,proto3" json:"factory_version,omitempty"`
+type StartInitializingTransactionRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Opaque to go/ — Ruby's own metadata identifying which business-process
+	// template built this DAG (e.g. "ach_deposit", "v2"). go/ records both
+	// verbatim on TransactionInitialized and never interprets or validates
+	// them; go/ has no factory registry of its own in v1, and this plan does
+	// not add one. The external_guid field an earlier draft of this scaffold
+	// also carried is dropped entirely: id (a caller-supplied UUID) is already
+	// this aggregate's one identity/idempotency key, the same as every other
+	// aggregate in this codebase — a second identifier would need its own
+	// conflict rule (same external_guid, different id?) that nothing requires.
+	FactoryName    string `protobuf:"bytes,2,opt,name=factory_name,json=factoryName,proto3" json:"factory_name,omitempty"`
+	FactoryVersion string `protobuf:"bytes,3,opt,name=factory_version,json=factoryVersion,proto3" json:"factory_version,omitempty"`
 	// keyed by the Transfer's own id, so we can do dependency mapping based on id
-	Transfers          map[string]*Transfer `protobuf:"bytes,6,rep,name=transfers,proto3" json:"transfers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	TransferDependency map[string]string    `protobuf:"bytes,7,rep,name=transfer_dependency,json=transferDependency,proto3" json:"transfer_dependency,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Transfers map[string]*Transfer `protobuf:"bytes,4,rep,name=transfers,proto3" json:"transfers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// child_id -> every parent id that must complete before the child becomes
+	// ready (an AND-join). Natively expresses one-to-one, many-to-one,
+	// one-to-many, and many-to-many, with no synthetic chain nodes.
+	TransferDependency map[string]*TransferIdList `protobuf:"bytes,5,rep,name=transfer_dependency,json=transferDependency,proto3" json:"transfer_dependency,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
 
-func (x *StartInitializingTransaction) Reset() {
-	*x = StartInitializingTransaction{}
+func (x *StartInitializingTransactionRequest) Reset() {
+	*x = StartInitializingTransactionRequest{}
 	mi := &file_transaction_v1_transaction_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *StartInitializingTransaction) String() string {
+func (x *StartInitializingTransactionRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*StartInitializingTransaction) ProtoMessage() {}
+func (*StartInitializingTransactionRequest) ProtoMessage() {}
 
-func (x *StartInitializingTransaction) ProtoReflect() protoreflect.Message {
+func (x *StartInitializingTransactionRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_transaction_v1_transaction_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -191,47 +332,40 @@ func (x *StartInitializingTransaction) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use StartInitializingTransaction.ProtoReflect.Descriptor instead.
-func (*StartInitializingTransaction) Descriptor() ([]byte, []int) {
+// Deprecated: Use StartInitializingTransactionRequest.ProtoReflect.Descriptor instead.
+func (*StartInitializingTransactionRequest) Descriptor() ([]byte, []int) {
 	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *StartInitializingTransaction) GetId() string {
+func (x *StartInitializingTransactionRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *StartInitializingTransaction) GetExternalGuid() string {
-	if x != nil {
-		return x.ExternalGuid
-	}
-	return ""
-}
-
-func (x *StartInitializingTransaction) GetFactoryName() string {
+func (x *StartInitializingTransactionRequest) GetFactoryName() string {
 	if x != nil {
 		return x.FactoryName
 	}
 	return ""
 }
 
-func (x *StartInitializingTransaction) GetFactoryVersion() string {
+func (x *StartInitializingTransactionRequest) GetFactoryVersion() string {
 	if x != nil {
 		return x.FactoryVersion
 	}
 	return ""
 }
 
-func (x *StartInitializingTransaction) GetTransfers() map[string]*Transfer {
+func (x *StartInitializingTransactionRequest) GetTransfers() map[string]*Transfer {
 	if x != nil {
 		return x.Transfers
 	}
 	return nil
 }
 
-func (x *StartInitializingTransaction) GetTransferDependency() map[string]string {
+func (x *StartInitializingTransactionRequest) GetTransferDependency() map[string]*TransferIdList {
 	if x != nil {
 		return x.TransferDependency
 	}
@@ -239,12 +373,12 @@ func (x *StartInitializingTransaction) GetTransferDependency() map[string]string
 }
 
 type TransactionInitialized struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Memos map[string]*Memo       `protobuf:"bytes,2,rep,name=memos,proto3" json:"memos,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// keyed by the Transfer's own id, so we can do dependency mapping based on id
-	Transfers          map[string]*Transfer `protobuf:"bytes,6,rep,name=transfers,proto3" json:"transfers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	TransferDependency map[string]string    `protobuf:"bytes,7,rep,name=transfer_dependency,json=transferDependency,proto3" json:"transfer_dependency,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	state              protoimpl.MessageState     `protogen:"open.v1"`
+	Id                 string                     `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	FactoryName        string                     `protobuf:"bytes,2,opt,name=factory_name,json=factoryName,proto3" json:"factory_name,omitempty"`
+	FactoryVersion     string                     `protobuf:"bytes,3,opt,name=factory_version,json=factoryVersion,proto3" json:"factory_version,omitempty"`
+	Transfers          map[string]*Transfer       `protobuf:"bytes,4,rep,name=transfers,proto3" json:"transfers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	TransferDependency map[string]*TransferIdList `protobuf:"bytes,5,rep,name=transfer_dependency,json=transferDependency,proto3" json:"transfer_dependency,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -286,11 +420,18 @@ func (x *TransactionInitialized) GetId() string {
 	return ""
 }
 
-func (x *TransactionInitialized) GetMemos() map[string]*Memo {
+func (x *TransactionInitialized) GetFactoryName() string {
 	if x != nil {
-		return x.Memos
+		return x.FactoryName
 	}
-	return nil
+	return ""
+}
+
+func (x *TransactionInitialized) GetFactoryVersion() string {
+	if x != nil {
+		return x.FactoryVersion
+	}
+	return ""
 }
 
 func (x *TransactionInitialized) GetTransfers() map[string]*Transfer {
@@ -300,34 +441,35 @@ func (x *TransactionInitialized) GetTransfers() map[string]*Transfer {
 	return nil
 }
 
-func (x *TransactionInitialized) GetTransferDependency() map[string]string {
+func (x *TransactionInitialized) GetTransferDependency() map[string]*TransferIdList {
 	if x != nil {
 		return x.TransferDependency
 	}
 	return nil
 }
 
-type StartBuildingTransaction struct {
+type TransactionRejected struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"` // cyclic/self dependency, dangling parent reference, empty transfers map, ...
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *StartBuildingTransaction) Reset() {
-	*x = StartBuildingTransaction{}
+func (x *TransactionRejected) Reset() {
+	*x = TransactionRejected{}
 	mi := &file_transaction_v1_transaction_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *StartBuildingTransaction) String() string {
+func (x *TransactionRejected) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*StartBuildingTransaction) ProtoMessage() {}
+func (*TransactionRejected) ProtoMessage() {}
 
-func (x *StartBuildingTransaction) ProtoReflect() protoreflect.Message {
+func (x *TransactionRejected) ProtoReflect() protoreflect.Message {
 	mi := &file_transaction_v1_transaction_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -339,39 +481,51 @@ func (x *StartBuildingTransaction) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use StartBuildingTransaction.ProtoReflect.Descriptor instead.
-func (*StartBuildingTransaction) Descriptor() ([]byte, []int) {
+// Deprecated: Use TransactionRejected.ProtoReflect.Descriptor instead.
+func (*TransactionRejected) Descriptor() ([]byte, []int) {
 	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *StartBuildingTransaction) GetId() string {
+func (x *TransactionRejected) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-type TransactionBuildingStarted struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+func (x *TransactionRejected) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type StartInitializingTransactionResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Types that are valid to be assigned to Result:
+	//
+	//	*StartInitializingTransactionResponse_TransactionInitialized
+	//	*StartInitializingTransactionResponse_TransactionRejected
+	Result        isStartInitializingTransactionResponse_Result `protobuf_oneof:"result"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *TransactionBuildingStarted) Reset() {
-	*x = TransactionBuildingStarted{}
+func (x *StartInitializingTransactionResponse) Reset() {
+	*x = StartInitializingTransactionResponse{}
 	mi := &file_transaction_v1_transaction_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *TransactionBuildingStarted) String() string {
+func (x *StartInitializingTransactionResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*TransactionBuildingStarted) ProtoMessage() {}
+func (*StartInitializingTransactionResponse) ProtoMessage() {}
 
-func (x *TransactionBuildingStarted) ProtoReflect() protoreflect.Message {
+func (x *StartInitializingTransactionResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_transaction_v1_transaction_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -383,148 +537,59 @@ func (x *TransactionBuildingStarted) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use TransactionBuildingStarted.ProtoReflect.Descriptor instead.
-func (*TransactionBuildingStarted) Descriptor() ([]byte, []int) {
+// Deprecated: Use StartInitializingTransactionResponse.ProtoReflect.Descriptor instead.
+func (*StartInitializingTransactionResponse) Descriptor() ([]byte, []int) {
 	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *TransactionBuildingStarted) GetId() string {
+func (x *StartInitializingTransactionResponse) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-type CompleteBuildingTransaction struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CompleteBuildingTransaction) Reset() {
-	*x = CompleteBuildingTransaction{}
-	mi := &file_transaction_v1_transaction_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CompleteBuildingTransaction) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CompleteBuildingTransaction) ProtoMessage() {}
-
-func (x *CompleteBuildingTransaction) ProtoReflect() protoreflect.Message {
-	mi := &file_transaction_v1_transaction_proto_msgTypes[6]
+func (x *StartInitializingTransactionResponse) GetResult() isStartInitializingTransactionResponse_Result {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
+		return x.Result
+	}
+	return nil
+}
+
+func (x *StartInitializingTransactionResponse) GetTransactionInitialized() *TransactionInitialized {
+	if x != nil {
+		if x, ok := x.Result.(*StartInitializingTransactionResponse_TransactionInitialized); ok {
+			return x.TransactionInitialized
 		}
-		return ms
 	}
-	return mi.MessageOf(x)
+	return nil
 }
 
-// Deprecated: Use CompleteBuildingTransaction.ProtoReflect.Descriptor instead.
-func (*CompleteBuildingTransaction) Descriptor() ([]byte, []int) {
-	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *CompleteBuildingTransaction) GetId() string {
+func (x *StartInitializingTransactionResponse) GetTransactionRejected() *TransactionRejected {
 	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-type TransactionBuilt struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *TransactionBuilt) Reset() {
-	*x = TransactionBuilt{}
-	mi := &file_transaction_v1_transaction_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *TransactionBuilt) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*TransactionBuilt) ProtoMessage() {}
-
-func (x *TransactionBuilt) ProtoReflect() protoreflect.Message {
-	mi := &file_transaction_v1_transaction_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
+		if x, ok := x.Result.(*StartInitializingTransactionResponse_TransactionRejected); ok {
+			return x.TransactionRejected
 		}
-		return ms
 	}
-	return mi.MessageOf(x)
+	return nil
 }
 
-// Deprecated: Use TransactionBuilt.ProtoReflect.Descriptor instead.
-func (*TransactionBuilt) Descriptor() ([]byte, []int) {
-	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{7}
+type isStartInitializingTransactionResponse_Result interface {
+	isStartInitializingTransactionResponse_Result()
 }
 
-func (x *TransactionBuilt) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
+type StartInitializingTransactionResponse_TransactionInitialized struct {
+	TransactionInitialized *TransactionInitialized `protobuf:"bytes,2,opt,name=transaction_initialized,json=transactionInitialized,proto3,oneof"`
 }
 
-type StartTransaction struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+type StartInitializingTransactionResponse_TransactionRejected struct {
+	TransactionRejected *TransactionRejected `protobuf:"bytes,3,opt,name=transaction_rejected,json=transactionRejected,proto3,oneof"`
 }
 
-func (x *StartTransaction) Reset() {
-	*x = StartTransaction{}
-	mi := &file_transaction_v1_transaction_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
+func (*StartInitializingTransactionResponse_TransactionInitialized) isStartInitializingTransactionResponse_Result() {
 }
 
-func (x *StartTransaction) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*StartTransaction) ProtoMessage() {}
-
-func (x *StartTransaction) ProtoReflect() protoreflect.Message {
-	mi := &file_transaction_v1_transaction_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use StartTransaction.ProtoReflect.Descriptor instead.
-func (*StartTransaction) Descriptor() ([]byte, []int) {
-	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *StartTransaction) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
+func (*StartInitializingTransactionResponse_TransactionRejected) isStartInitializingTransactionResponse_Result() {
 }
 
 type TransactionStarted struct {
@@ -536,7 +601,7 @@ type TransactionStarted struct {
 
 func (x *TransactionStarted) Reset() {
 	*x = TransactionStarted{}
-	mi := &file_transaction_v1_transaction_proto_msgTypes[9]
+	mi := &file_transaction_v1_transaction_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -548,7 +613,7 @@ func (x *TransactionStarted) String() string {
 func (*TransactionStarted) ProtoMessage() {}
 
 func (x *TransactionStarted) ProtoReflect() protoreflect.Message {
-	mi := &file_transaction_v1_transaction_proto_msgTypes[9]
+	mi := &file_transaction_v1_transaction_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -561,12 +626,229 @@ func (x *TransactionStarted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransactionStarted.ProtoReflect.Descriptor instead.
 func (*TransactionStarted) Descriptor() ([]byte, []int) {
-	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{9}
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *TransactionStarted) GetId() string {
 	if x != nil {
 		return x.Id
+	}
+	return ""
+}
+
+type TransferRequestedWithinTransaction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TransferId    string                 `protobuf:"bytes,2,opt,name=transfer_id,json=transferId,proto3" json:"transfer_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TransferRequestedWithinTransaction) Reset() {
+	*x = TransferRequestedWithinTransaction{}
+	mi := &file_transaction_v1_transaction_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransferRequestedWithinTransaction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransferRequestedWithinTransaction) ProtoMessage() {}
+
+func (x *TransferRequestedWithinTransaction) ProtoReflect() protoreflect.Message {
+	mi := &file_transaction_v1_transaction_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransferRequestedWithinTransaction.ProtoReflect.Descriptor instead.
+func (*TransferRequestedWithinTransaction) Descriptor() ([]byte, []int) {
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *TransferRequestedWithinTransaction) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TransferRequestedWithinTransaction) GetTransferId() string {
+	if x != nil {
+		return x.TransferId
+	}
+	return ""
+}
+
+// auto_process=false, awaiting StartProcessingTransfer.
+type TransferGatedWithinTransaction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TransferId    string                 `protobuf:"bytes,2,opt,name=transfer_id,json=transferId,proto3" json:"transfer_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TransferGatedWithinTransaction) Reset() {
+	*x = TransferGatedWithinTransaction{}
+	mi := &file_transaction_v1_transaction_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransferGatedWithinTransaction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransferGatedWithinTransaction) ProtoMessage() {}
+
+func (x *TransferGatedWithinTransaction) ProtoReflect() protoreflect.Message {
+	mi := &file_transaction_v1_transaction_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransferGatedWithinTransaction.ProtoReflect.Descriptor instead.
+func (*TransferGatedWithinTransaction) Descriptor() ([]byte, []int) {
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *TransferGatedWithinTransaction) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TransferGatedWithinTransaction) GetTransferId() string {
+	if x != nil {
+		return x.TransferId
+	}
+	return ""
+}
+
+type TransferCompletedWithinTransaction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TransferId    string                 `protobuf:"bytes,2,opt,name=transfer_id,json=transferId,proto3" json:"transfer_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TransferCompletedWithinTransaction) Reset() {
+	*x = TransferCompletedWithinTransaction{}
+	mi := &file_transaction_v1_transaction_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransferCompletedWithinTransaction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransferCompletedWithinTransaction) ProtoMessage() {}
+
+func (x *TransferCompletedWithinTransaction) ProtoReflect() protoreflect.Message {
+	mi := &file_transaction_v1_transaction_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransferCompletedWithinTransaction.ProtoReflect.Descriptor instead.
+func (*TransferCompletedWithinTransaction) Descriptor() ([]byte, []int) {
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *TransferCompletedWithinTransaction) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TransferCompletedWithinTransaction) GetTransferId() string {
+	if x != nil {
+		return x.TransferId
+	}
+	return ""
+}
+
+type TransferFailedWithinTransaction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TransferId    string                 `protobuf:"bytes,2,opt,name=transfer_id,json=transferId,proto3" json:"transfer_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TransferFailedWithinTransaction) Reset() {
+	*x = TransferFailedWithinTransaction{}
+	mi := &file_transaction_v1_transaction_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransferFailedWithinTransaction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransferFailedWithinTransaction) ProtoMessage() {}
+
+func (x *TransferFailedWithinTransaction) ProtoReflect() protoreflect.Message {
+	mi := &file_transaction_v1_transaction_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransferFailedWithinTransaction.ProtoReflect.Descriptor instead.
+func (*TransferFailedWithinTransaction) Descriptor() ([]byte, []int) {
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *TransferFailedWithinTransaction) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TransferFailedWithinTransaction) GetTransferId() string {
+	if x != nil {
+		return x.TransferId
+	}
+	return ""
+}
+
+func (x *TransferFailedWithinTransaction) GetReason() string {
+	if x != nil {
+		return x.Reason
 	}
 	return ""
 }
@@ -580,7 +862,7 @@ type TransactionCompleted struct {
 
 func (x *TransactionCompleted) Reset() {
 	*x = TransactionCompleted{}
-	mi := &file_transaction_v1_transaction_proto_msgTypes[10]
+	mi := &file_transaction_v1_transaction_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -592,7 +874,7 @@ func (x *TransactionCompleted) String() string {
 func (*TransactionCompleted) ProtoMessage() {}
 
 func (x *TransactionCompleted) ProtoReflect() protoreflect.Message {
-	mi := &file_transaction_v1_transaction_proto_msgTypes[10]
+	mi := &file_transaction_v1_transaction_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -605,7 +887,7 @@ func (x *TransactionCompleted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransactionCompleted.ProtoReflect.Descriptor instead.
 func (*TransactionCompleted) Descriptor() ([]byte, []int) {
-	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{10}
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *TransactionCompleted) GetId() string {
@@ -615,28 +897,29 @@ func (x *TransactionCompleted) GetId() string {
 	return ""
 }
 
-type StartTransactionRollback struct {
+type StartTransactionRollbackRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *StartTransactionRollback) Reset() {
-	*x = StartTransactionRollback{}
-	mi := &file_transaction_v1_transaction_proto_msgTypes[11]
+func (x *StartTransactionRollbackRequest) Reset() {
+	*x = StartTransactionRollbackRequest{}
+	mi := &file_transaction_v1_transaction_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *StartTransactionRollback) String() string {
+func (x *StartTransactionRollbackRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*StartTransactionRollback) ProtoMessage() {}
+func (*StartTransactionRollbackRequest) ProtoMessage() {}
 
-func (x *StartTransactionRollback) ProtoReflect() protoreflect.Message {
-	mi := &file_transaction_v1_transaction_proto_msgTypes[11]
+func (x *StartTransactionRollbackRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_transaction_v1_transaction_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -647,14 +930,21 @@ func (x *StartTransactionRollback) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use StartTransactionRollback.ProtoReflect.Descriptor instead.
-func (*StartTransactionRollback) Descriptor() ([]byte, []int) {
-	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{11}
+// Deprecated: Use StartTransactionRollbackRequest.ProtoReflect.Descriptor instead.
+func (*StartTransactionRollbackRequest) Descriptor() ([]byte, []int) {
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{12}
 }
 
-func (x *StartTransactionRollback) GetId() string {
+func (x *StartTransactionRollbackRequest) GetId() string {
 	if x != nil {
 		return x.Id
+	}
+	return ""
+}
+
+func (x *StartTransactionRollbackRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
 	}
 	return ""
 }
@@ -662,13 +952,14 @@ func (x *StartTransactionRollback) GetId() string {
 type TransactionRollbackStarted struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *TransactionRollbackStarted) Reset() {
 	*x = TransactionRollbackStarted{}
-	mi := &file_transaction_v1_transaction_proto_msgTypes[12]
+	mi := &file_transaction_v1_transaction_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -680,7 +971,7 @@ func (x *TransactionRollbackStarted) String() string {
 func (*TransactionRollbackStarted) ProtoMessage() {}
 
 func (x *TransactionRollbackStarted) ProtoReflect() protoreflect.Message {
-	mi := &file_transaction_v1_transaction_proto_msgTypes[12]
+	mi := &file_transaction_v1_transaction_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -693,7 +984,7 @@ func (x *TransactionRollbackStarted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransactionRollbackStarted.ProtoReflect.Descriptor instead.
 func (*TransactionRollbackStarted) Descriptor() ([]byte, []int) {
-	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{12}
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *TransactionRollbackStarted) GetId() string {
@@ -703,16 +994,152 @@ func (x *TransactionRollbackStarted) GetId() string {
 	return ""
 }
 
+func (x *TransactionRollbackStarted) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type TransferRolledBackWithinTransaction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TransferId    string                 `protobuf:"bytes,2,opt,name=transfer_id,json=transferId,proto3" json:"transfer_id,omitempty"`
+	Method        RollbackMethod         `protobuf:"varint,3,opt,name=method,proto3,enum=transaction.v1.RollbackMethod" json:"method,omitempty"`
+	DetailId      string                 `protobuf:"bytes,4,opt,name=detail_id,json=detailId,proto3" json:"detail_id,omitempty"` // the reversal Transfer's own id, when method == REVERSED
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TransferRolledBackWithinTransaction) Reset() {
+	*x = TransferRolledBackWithinTransaction{}
+	mi := &file_transaction_v1_transaction_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransferRolledBackWithinTransaction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransferRolledBackWithinTransaction) ProtoMessage() {}
+
+func (x *TransferRolledBackWithinTransaction) ProtoReflect() protoreflect.Message {
+	mi := &file_transaction_v1_transaction_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransferRolledBackWithinTransaction.ProtoReflect.Descriptor instead.
+func (*TransferRolledBackWithinTransaction) Descriptor() ([]byte, []int) {
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *TransferRolledBackWithinTransaction) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TransferRolledBackWithinTransaction) GetTransferId() string {
+	if x != nil {
+		return x.TransferId
+	}
+	return ""
+}
+
+func (x *TransferRolledBackWithinTransaction) GetMethod() RollbackMethod {
+	if x != nil {
+		return x.Method
+	}
+	return RollbackMethod_ROLLBACK_METHOD_UNSPECIFIED
+}
+
+func (x *TransferRolledBackWithinTransaction) GetDetailId() string {
+	if x != nil {
+		return x.DetailId
+	}
+	return ""
+}
+
+type TransferRollbackFailedWithinTransaction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TransferId    string                 `protobuf:"bytes,2,opt,name=transfer_id,json=transferId,proto3" json:"transfer_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TransferRollbackFailedWithinTransaction) Reset() {
+	*x = TransferRollbackFailedWithinTransaction{}
+	mi := &file_transaction_v1_transaction_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransferRollbackFailedWithinTransaction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransferRollbackFailedWithinTransaction) ProtoMessage() {}
+
+func (x *TransferRollbackFailedWithinTransaction) ProtoReflect() protoreflect.Message {
+	mi := &file_transaction_v1_transaction_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransferRollbackFailedWithinTransaction.ProtoReflect.Descriptor instead.
+func (*TransferRollbackFailedWithinTransaction) Descriptor() ([]byte, []int) {
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *TransferRollbackFailedWithinTransaction) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TransferRollbackFailedWithinTransaction) GetTransferId() string {
+	if x != nil {
+		return x.TransferId
+	}
+	return ""
+}
+
+func (x *TransferRollbackFailedWithinTransaction) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
 type TransactionRolledBack struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *TransactionRolledBack) Reset() {
 	*x = TransactionRolledBack{}
-	mi := &file_transaction_v1_transaction_proto_msgTypes[13]
+	mi := &file_transaction_v1_transaction_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -724,7 +1151,7 @@ func (x *TransactionRolledBack) String() string {
 func (*TransactionRolledBack) ProtoMessage() {}
 
 func (x *TransactionRolledBack) ProtoReflect() protoreflect.Message {
-	mi := &file_transaction_v1_transaction_proto_msgTypes[13]
+	mi := &file_transaction_v1_transaction_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -737,7 +1164,7 @@ func (x *TransactionRolledBack) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransactionRolledBack.ProtoReflect.Descriptor instead.
 func (*TransactionRolledBack) Descriptor() ([]byte, []int) {
-	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{13}
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *TransactionRolledBack) GetId() string {
@@ -747,69 +1174,593 @@ func (x *TransactionRolledBack) GetId() string {
 	return ""
 }
 
+func (x *TransactionRolledBack) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// A reversal is itself a Transfer that can independently fail. When the
+// rollback sweep stalls with at least one child that could not be rolled
+// back, the Transaction cannot honestly claim TransactionRolledBack — this
+// is that distinct, operator-attention-required terminal instead, matching
+// how TransferFailed is a true terminal for Transfer rather than something
+// the saga walks back out of.
+type TransactionRollbackFailed struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TransactionRollbackFailed) Reset() {
+	*x = TransactionRollbackFailed{}
+	mi := &file_transaction_v1_transaction_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransactionRollbackFailed) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransactionRollbackFailed) ProtoMessage() {}
+
+func (x *TransactionRollbackFailed) ProtoReflect() protoreflect.Message {
+	mi := &file_transaction_v1_transaction_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransactionRollbackFailed.ProtoReflect.Descriptor instead.
+func (*TransactionRollbackFailed) Descriptor() ([]byte, []int) {
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *TransactionRollbackFailed) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TransactionRollbackFailed) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type StartProcessingTransferRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TransferId    string                 `protobuf:"bytes,2,opt,name=transfer_id,json=transferId,proto3" json:"transfer_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartProcessingTransferRequest) Reset() {
+	*x = StartProcessingTransferRequest{}
+	mi := &file_transaction_v1_transaction_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartProcessingTransferRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartProcessingTransferRequest) ProtoMessage() {}
+
+func (x *StartProcessingTransferRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_transaction_v1_transaction_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartProcessingTransferRequest.ProtoReflect.Descriptor instead.
+func (*StartProcessingTransferRequest) Descriptor() ([]byte, []int) {
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *StartProcessingTransferRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *StartProcessingTransferRequest) GetTransferId() string {
+	if x != nil {
+		return x.TransferId
+	}
+	return ""
+}
+
+type StartProcessingTransferRejected struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TransferId    string                 `protobuf:"bytes,2,opt,name=transfer_id,json=transferId,proto3" json:"transfer_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartProcessingTransferRejected) Reset() {
+	*x = StartProcessingTransferRejected{}
+	mi := &file_transaction_v1_transaction_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartProcessingTransferRejected) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartProcessingTransferRejected) ProtoMessage() {}
+
+func (x *StartProcessingTransferRejected) ProtoReflect() protoreflect.Message {
+	mi := &file_transaction_v1_transaction_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartProcessingTransferRejected.ProtoReflect.Descriptor instead.
+func (*StartProcessingTransferRejected) Descriptor() ([]byte, []int) {
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *StartProcessingTransferRejected) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *StartProcessingTransferRejected) GetTransferId() string {
+	if x != nil {
+		return x.TransferId
+	}
+	return ""
+}
+
+func (x *StartProcessingTransferRejected) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type StartProcessingTransferResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Types that are valid to be assigned to Result:
+	//
+	//	*StartProcessingTransferResponse_TransferRequestedWithinTransaction
+	//	*StartProcessingTransferResponse_TransferFailedWithinTransaction
+	//	*StartProcessingTransferResponse_StartProcessingTransferRejected
+	Result        isStartProcessingTransferResponse_Result `protobuf_oneof:"result"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartProcessingTransferResponse) Reset() {
+	*x = StartProcessingTransferResponse{}
+	mi := &file_transaction_v1_transaction_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartProcessingTransferResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartProcessingTransferResponse) ProtoMessage() {}
+
+func (x *StartProcessingTransferResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_transaction_v1_transaction_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartProcessingTransferResponse.ProtoReflect.Descriptor instead.
+func (*StartProcessingTransferResponse) Descriptor() ([]byte, []int) {
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *StartProcessingTransferResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *StartProcessingTransferResponse) GetResult() isStartProcessingTransferResponse_Result {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
+func (x *StartProcessingTransferResponse) GetTransferRequestedWithinTransaction() *TransferRequestedWithinTransaction {
+	if x != nil {
+		if x, ok := x.Result.(*StartProcessingTransferResponse_TransferRequestedWithinTransaction); ok {
+			return x.TransferRequestedWithinTransaction
+		}
+	}
+	return nil
+}
+
+func (x *StartProcessingTransferResponse) GetTransferFailedWithinTransaction() *TransferFailedWithinTransaction {
+	if x != nil {
+		if x, ok := x.Result.(*StartProcessingTransferResponse_TransferFailedWithinTransaction); ok {
+			return x.TransferFailedWithinTransaction
+		}
+	}
+	return nil
+}
+
+func (x *StartProcessingTransferResponse) GetStartProcessingTransferRejected() *StartProcessingTransferRejected {
+	if x != nil {
+		if x, ok := x.Result.(*StartProcessingTransferResponse_StartProcessingTransferRejected); ok {
+			return x.StartProcessingTransferRejected
+		}
+	}
+	return nil
+}
+
+type isStartProcessingTransferResponse_Result interface {
+	isStartProcessingTransferResponse_Result()
+}
+
+type StartProcessingTransferResponse_TransferRequestedWithinTransaction struct {
+	TransferRequestedWithinTransaction *TransferRequestedWithinTransaction `protobuf:"bytes,2,opt,name=transfer_requested_within_transaction,json=transferRequestedWithinTransaction,proto3,oneof"`
+}
+
+type StartProcessingTransferResponse_TransferFailedWithinTransaction struct {
+	TransferFailedWithinTransaction *TransferFailedWithinTransaction `protobuf:"bytes,3,opt,name=transfer_failed_within_transaction,json=transferFailedWithinTransaction,proto3,oneof"`
+}
+
+type StartProcessingTransferResponse_StartProcessingTransferRejected struct {
+	StartProcessingTransferRejected *StartProcessingTransferRejected `protobuf:"bytes,4,opt,name=start_processing_transfer_rejected,json=startProcessingTransferRejected,proto3,oneof"`
+}
+
+func (*StartProcessingTransferResponse_TransferRequestedWithinTransaction) isStartProcessingTransferResponse_Result() {
+}
+
+func (*StartProcessingTransferResponse_TransferFailedWithinTransaction) isStartProcessingTransferResponse_Result() {
+}
+
+func (*StartProcessingTransferResponse_StartProcessingTransferRejected) isStartProcessingTransferResponse_Result() {
+}
+
+// No naturally-repeated entry point exists for Transaction the way every
+// Transfer RPC re-runs runSaga on call: a staged child settles via calls
+// made on ITS OWN id (ConfirmStagedTransfer/PostPendingTransfer), which the
+// owning Transaction has no way to learn about except by being asked to
+// look again. Contract: ruby calls the child's own staged-settlement RPC,
+// then calls ResumeTransaction(owning_transaction_id) — no polling, no
+// background worker, matching the synchronous-in-process model the Transfer
+// saga itself already uses.
+type ResumeTransactionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResumeTransactionRequest) Reset() {
+	*x = ResumeTransactionRequest{}
+	mi := &file_transaction_v1_transaction_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResumeTransactionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResumeTransactionRequest) ProtoMessage() {}
+
+func (x *ResumeTransactionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_transaction_v1_transaction_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResumeTransactionRequest.ProtoReflect.Descriptor instead.
+func (*ResumeTransactionRequest) Descriptor() ([]byte, []int) {
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ResumeTransactionRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ResumeTransactionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	State         TransactionState       `protobuf:"varint,2,opt,name=state,proto3,enum=transaction.v1.TransactionState" json:"state,omitempty"`
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResumeTransactionResponse) Reset() {
+	*x = ResumeTransactionResponse{}
+	mi := &file_transaction_v1_transaction_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResumeTransactionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResumeTransactionResponse) ProtoMessage() {}
+
+func (x *ResumeTransactionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_transaction_v1_transaction_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResumeTransactionResponse.ProtoReflect.Descriptor instead.
+func (*ResumeTransactionResponse) Descriptor() ([]byte, []int) {
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *ResumeTransactionResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ResumeTransactionResponse) GetState() TransactionState {
+	if x != nil {
+		return x.State
+	}
+	return TransactionState_TRANSACTION_STATE_UNSPECIFIED
+}
+
+func (x *ResumeTransactionResponse) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type StartTransactionRollbackResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	State         TransactionState       `protobuf:"varint,2,opt,name=state,proto3,enum=transaction.v1.TransactionState" json:"state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartTransactionRollbackResponse) Reset() {
+	*x = StartTransactionRollbackResponse{}
+	mi := &file_transaction_v1_transaction_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartTransactionRollbackResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartTransactionRollbackResponse) ProtoMessage() {}
+
+func (x *StartTransactionRollbackResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_transaction_v1_transaction_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartTransactionRollbackResponse.ProtoReflect.Descriptor instead.
+func (*StartTransactionRollbackResponse) Descriptor() ([]byte, []int) {
+	return file_transaction_v1_transaction_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *StartTransactionRollbackResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *StartTransactionRollbackResponse) GetState() TransactionState {
+	if x != nil {
+		return x.State
+	}
+	return TransactionState_TRANSACTION_STATE_UNSPECIFIED
+}
+
 var File_transaction_v1_transaction_proto protoreflect.FileDescriptor
 
 const file_transaction_v1_transaction_proto_rawDesc = "" +
 	"\n" +
-	" transaction/v1/transaction.proto\x12\x0etransaction.v1\x1a\x15shared/v1/money.proto\",\n" +
-	"\x04Memo\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value\"\xaf\x01\n" +
+	" transaction/v1/transaction.proto\x12\x0etransaction.v1\x1a\x15shared/v1/money.proto\"\xe6\x01\n" +
 	"\bTransfer\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x06amount\x18\x02 \x01(\v2\x10.shared.v1.MoneyR\x06amount\x12$\n" +
 	"\x0efrom_wallet_id\x18\x03 \x01(\tR\ffromWalletId\x12 \n" +
 	"\fto_wallet_id\x18\x04 \x01(\tR\n" +
 	"toWalletId\x12!\n" +
-	"\fauto_process\x18\x05 \x01(\bR\vautoProcess\"\x90\x04\n" +
-	"\x1cStartInitializingTransaction\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
-	"\rexternal_guid\x18\x02 \x01(\tR\fexternalGuid\x12!\n" +
-	"\ffactory_name\x18\x03 \x01(\tR\vfactoryName\x12'\n" +
-	"\x0ffactory_version\x18\x04 \x01(\tR\x0efactoryVersion\x12Y\n" +
-	"\ttransfers\x18\x06 \x03(\v2;.transaction.v1.StartInitializingTransaction.TransfersEntryR\ttransfers\x12u\n" +
-	"\x13transfer_dependency\x18\a \x03(\v2D.transaction.v1.StartInitializingTransaction.TransferDependencyEntryR\x12transferDependency\x1aV\n" +
+	"\fauto_process\x18\x05 \x01(\bR\vautoProcess\x12\x14\n" +
+	"\x05stage\x18\x06 \x01(\bR\x05stage\x12\x1f\n" +
+	"\vmint_source\x18\a \x01(\bR\n" +
+	"mintSource\"1\n" +
+	"\x0eTransferIdList\x12\x1f\n" +
+	"\vtransfer_id\x18\x01 \x03(\tR\n" +
+	"transferId\"\xa0\x04\n" +
+	"#StartInitializingTransactionRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
+	"\ffactory_name\x18\x02 \x01(\tR\vfactoryName\x12'\n" +
+	"\x0ffactory_version\x18\x03 \x01(\tR\x0efactoryVersion\x12`\n" +
+	"\ttransfers\x18\x04 \x03(\v2B.transaction.v1.StartInitializingTransactionRequest.TransfersEntryR\ttransfers\x12|\n" +
+	"\x13transfer_dependency\x18\x05 \x03(\v2K.transaction.v1.StartInitializingTransactionRequest.TransferDependencyEntryR\x12transferDependency\x1aV\n" +
 	"\x0eTransfersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12.\n" +
-	"\x05value\x18\x02 \x01(\v2\x18.transaction.v1.TransferR\x05value:\x028\x01\x1aE\n" +
+	"\x05value\x18\x02 \x01(\v2\x18.transaction.v1.TransferR\x05value:\x028\x01\x1ae\n" +
 	"\x17TransferDependencyEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa6\x04\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x124\n" +
+	"\x05value\x18\x02 \x01(\v2\x1e.transaction.v1.TransferIdListR\x05value:\x028\x01\"\xf9\x03\n" +
 	"\x16TransactionInitialized\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12G\n" +
-	"\x05memos\x18\x02 \x03(\v21.transaction.v1.TransactionInitialized.MemosEntryR\x05memos\x12S\n" +
-	"\ttransfers\x18\x06 \x03(\v25.transaction.v1.TransactionInitialized.TransfersEntryR\ttransfers\x12o\n" +
-	"\x13transfer_dependency\x18\a \x03(\v2>.transaction.v1.TransactionInitialized.TransferDependencyEntryR\x12transferDependency\x1aN\n" +
-	"\n" +
-	"MemosEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12*\n" +
-	"\x05value\x18\x02 \x01(\v2\x14.transaction.v1.MemoR\x05value:\x028\x01\x1aV\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
+	"\ffactory_name\x18\x02 \x01(\tR\vfactoryName\x12'\n" +
+	"\x0ffactory_version\x18\x03 \x01(\tR\x0efactoryVersion\x12S\n" +
+	"\ttransfers\x18\x04 \x03(\v25.transaction.v1.TransactionInitialized.TransfersEntryR\ttransfers\x12o\n" +
+	"\x13transfer_dependency\x18\x05 \x03(\v2>.transaction.v1.TransactionInitialized.TransferDependencyEntryR\x12transferDependency\x1aV\n" +
 	"\x0eTransfersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12.\n" +
-	"\x05value\x18\x02 \x01(\v2\x18.transaction.v1.TransferR\x05value:\x028\x01\x1aE\n" +
+	"\x05value\x18\x02 \x01(\v2\x18.transaction.v1.TransferR\x05value:\x028\x01\x1ae\n" +
 	"\x17TransferDependencyEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"*\n" +
-	"\x18StartBuildingTransaction\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\",\n" +
-	"\x1aTransactionBuildingStarted\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"-\n" +
-	"\x1bCompleteBuildingTransaction\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\"\n" +
-	"\x10TransactionBuilt\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\"\n" +
-	"\x10StartTransaction\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"$\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x124\n" +
+	"\x05value\x18\x02 \x01(\v2\x1e.transaction.v1.TransferIdListR\x05value:\x028\x01\"=\n" +
+	"\x13TransactionRejected\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"\xfd\x01\n" +
+	"$StartInitializingTransactionResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12a\n" +
+	"\x17transaction_initialized\x18\x02 \x01(\v2&.transaction.v1.TransactionInitializedH\x00R\x16transactionInitialized\x12X\n" +
+	"\x14transaction_rejected\x18\x03 \x01(\v2#.transaction.v1.TransactionRejectedH\x00R\x13transactionRejectedB\b\n" +
+	"\x06result\"$\n" +
 	"\x12TransactionStarted\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"&\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"U\n" +
+	"\"TransferRequestedWithinTransaction\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vtransfer_id\x18\x02 \x01(\tR\n" +
+	"transferId\"Q\n" +
+	"\x1eTransferGatedWithinTransaction\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vtransfer_id\x18\x02 \x01(\tR\n" +
+	"transferId\"U\n" +
+	"\"TransferCompletedWithinTransaction\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vtransfer_id\x18\x02 \x01(\tR\n" +
+	"transferId\"j\n" +
+	"\x1fTransferFailedWithinTransaction\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vtransfer_id\x18\x02 \x01(\tR\n" +
+	"transferId\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"&\n" +
 	"\x14TransactionCompleted\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"*\n" +
-	"\x18StartTransactionRollback\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\",\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"I\n" +
+	"\x1fStartTransactionRollbackRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"D\n" +
 	"\x1aTransactionRollbackStarted\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"'\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"\xab\x01\n" +
+	"#TransferRolledBackWithinTransaction\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vtransfer_id\x18\x02 \x01(\tR\n" +
+	"transferId\x126\n" +
+	"\x06method\x18\x03 \x01(\x0e2\x1e.transaction.v1.RollbackMethodR\x06method\x12\x1b\n" +
+	"\tdetail_id\x18\x04 \x01(\tR\bdetailId\"r\n" +
+	"'TransferRollbackFailedWithinTransaction\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vtransfer_id\x18\x02 \x01(\tR\n" +
+	"transferId\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"?\n" +
 	"\x15TransactionRolledBack\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02idBBZ@github.com/namelessnotion/money_flow/go/gen/proto/transaction/v1b\x06proto3"
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"C\n" +
+	"\x19TransactionRollbackFailed\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"Q\n" +
+	"\x1eStartProcessingTransferRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vtransfer_id\x18\x02 \x01(\tR\n" +
+	"transferId\"j\n" +
+	"\x1fStartProcessingTransferRejected\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vtransfer_id\x18\x02 \x01(\tR\n" +
+	"transferId\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"\xc5\x03\n" +
+	"\x1fStartProcessingTransferResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x87\x01\n" +
+	"%transfer_requested_within_transaction\x18\x02 \x01(\v22.transaction.v1.TransferRequestedWithinTransactionH\x00R\"transferRequestedWithinTransaction\x12~\n" +
+	"\"transfer_failed_within_transaction\x18\x03 \x01(\v2/.transaction.v1.TransferFailedWithinTransactionH\x00R\x1ftransferFailedWithinTransaction\x12~\n" +
+	"\"start_processing_transfer_rejected\x18\x04 \x01(\v2/.transaction.v1.StartProcessingTransferRejectedH\x00R\x1fstartProcessingTransferRejectedB\b\n" +
+	"\x06result\"*\n" +
+	"\x18ResumeTransactionRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"{\n" +
+	"\x19ResumeTransactionResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x126\n" +
+	"\x05state\x18\x02 \x01(\x0e2 .transaction.v1.TransactionStateR\x05state\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"j\n" +
+	" StartTransactionRollbackResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x126\n" +
+	"\x05state\x18\x02 \x01(\x0e2 .transaction.v1.TransactionStateR\x05state*\x8d\x01\n" +
+	"\x0eRollbackMethod\x12\x1f\n" +
+	"\x1bROLLBACK_METHOD_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18ROLLBACK_METHOD_REVERSED\x10\x01\x12\x1d\n" +
+	"\x19ROLLBACK_METHOD_CANCELLED\x10\x02\x12\x1d\n" +
+	"\x19ROLLBACK_METHOD_ABANDONED\x10\x03*\xaa\x02\n" +
+	"\x10TransactionState\x12!\n" +
+	"\x1dTRANSACTION_STATE_UNSPECIFIED\x10\x00\x12!\n" +
+	"\x1dTRANSACTION_STATE_INITIALIZED\x10\x01\x12\x1d\n" +
+	"\x19TRANSACTION_STATE_STARTED\x10\x02\x12&\n" +
+	"\"TRANSACTION_STATE_ROLLBACK_STARTED\x10\x03\x12\x1f\n" +
+	"\x1bTRANSACTION_STATE_COMPLETED\x10\x04\x12!\n" +
+	"\x1dTRANSACTION_STATE_ROLLED_BACK\x10\x05\x12%\n" +
+	"!TRANSACTION_STATE_ROLLBACK_FAILED\x10\x06\x12\x1e\n" +
+	"\x1aTRANSACTION_STATE_REJECTED\x10\a2\x8d\x04\n" +
+	"\x12TransactionService\x12\x8b\x01\n" +
+	"\x1cStartInitializingTransaction\x123.transaction.v1.StartInitializingTransactionRequest\x1a4.transaction.v1.StartInitializingTransactionResponse\"\x00\x12|\n" +
+	"\x17StartProcessingTransfer\x12..transaction.v1.StartProcessingTransferRequest\x1a/.transaction.v1.StartProcessingTransferResponse\"\x00\x12j\n" +
+	"\x11ResumeTransaction\x12(.transaction.v1.ResumeTransactionRequest\x1a).transaction.v1.ResumeTransactionResponse\"\x00\x12\x7f\n" +
+	"\x18StartTransactionRollback\x12/.transaction.v1.StartTransactionRollbackRequest\x1a0.transaction.v1.StartTransactionRollbackResponse\"\x00BBZ@github.com/namelessnotion/money_flow/go/gen/proto/transaction/v1b\x06proto3"
 
 var (
 	file_transaction_v1_transaction_proto_rawDescOnce sync.Once
@@ -823,44 +1774,72 @@ func file_transaction_v1_transaction_proto_rawDescGZIP() []byte {
 	return file_transaction_v1_transaction_proto_rawDescData
 }
 
-var file_transaction_v1_transaction_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_transaction_v1_transaction_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_transaction_v1_transaction_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_transaction_v1_transaction_proto_goTypes = []any{
-	(*Memo)(nil),                         // 0: transaction.v1.Memo
-	(*Transfer)(nil),                     // 1: transaction.v1.Transfer
-	(*StartInitializingTransaction)(nil), // 2: transaction.v1.StartInitializingTransaction
-	(*TransactionInitialized)(nil),       // 3: transaction.v1.TransactionInitialized
-	(*StartBuildingTransaction)(nil),     // 4: transaction.v1.StartBuildingTransaction
-	(*TransactionBuildingStarted)(nil),   // 5: transaction.v1.TransactionBuildingStarted
-	(*CompleteBuildingTransaction)(nil),  // 6: transaction.v1.CompleteBuildingTransaction
-	(*TransactionBuilt)(nil),             // 7: transaction.v1.TransactionBuilt
-	(*StartTransaction)(nil),             // 8: transaction.v1.StartTransaction
-	(*TransactionStarted)(nil),           // 9: transaction.v1.TransactionStarted
-	(*TransactionCompleted)(nil),         // 10: transaction.v1.TransactionCompleted
-	(*StartTransactionRollback)(nil),     // 11: transaction.v1.StartTransactionRollback
-	(*TransactionRollbackStarted)(nil),   // 12: transaction.v1.TransactionRollbackStarted
-	(*TransactionRolledBack)(nil),        // 13: transaction.v1.TransactionRolledBack
-	nil,                                  // 14: transaction.v1.StartInitializingTransaction.TransfersEntry
-	nil,                                  // 15: transaction.v1.StartInitializingTransaction.TransferDependencyEntry
-	nil,                                  // 16: transaction.v1.TransactionInitialized.MemosEntry
-	nil,                                  // 17: transaction.v1.TransactionInitialized.TransfersEntry
-	nil,                                  // 18: transaction.v1.TransactionInitialized.TransferDependencyEntry
-	(*v1.Money)(nil),                     // 19: shared.v1.Money
+	(RollbackMethod)(0),                             // 0: transaction.v1.RollbackMethod
+	(TransactionState)(0),                           // 1: transaction.v1.TransactionState
+	(*Transfer)(nil),                                // 2: transaction.v1.Transfer
+	(*TransferIdList)(nil),                          // 3: transaction.v1.TransferIdList
+	(*StartInitializingTransactionRequest)(nil),     // 4: transaction.v1.StartInitializingTransactionRequest
+	(*TransactionInitialized)(nil),                  // 5: transaction.v1.TransactionInitialized
+	(*TransactionRejected)(nil),                     // 6: transaction.v1.TransactionRejected
+	(*StartInitializingTransactionResponse)(nil),    // 7: transaction.v1.StartInitializingTransactionResponse
+	(*TransactionStarted)(nil),                      // 8: transaction.v1.TransactionStarted
+	(*TransferRequestedWithinTransaction)(nil),      // 9: transaction.v1.TransferRequestedWithinTransaction
+	(*TransferGatedWithinTransaction)(nil),          // 10: transaction.v1.TransferGatedWithinTransaction
+	(*TransferCompletedWithinTransaction)(nil),      // 11: transaction.v1.TransferCompletedWithinTransaction
+	(*TransferFailedWithinTransaction)(nil),         // 12: transaction.v1.TransferFailedWithinTransaction
+	(*TransactionCompleted)(nil),                    // 13: transaction.v1.TransactionCompleted
+	(*StartTransactionRollbackRequest)(nil),         // 14: transaction.v1.StartTransactionRollbackRequest
+	(*TransactionRollbackStarted)(nil),              // 15: transaction.v1.TransactionRollbackStarted
+	(*TransferRolledBackWithinTransaction)(nil),     // 16: transaction.v1.TransferRolledBackWithinTransaction
+	(*TransferRollbackFailedWithinTransaction)(nil), // 17: transaction.v1.TransferRollbackFailedWithinTransaction
+	(*TransactionRolledBack)(nil),                   // 18: transaction.v1.TransactionRolledBack
+	(*TransactionRollbackFailed)(nil),               // 19: transaction.v1.TransactionRollbackFailed
+	(*StartProcessingTransferRequest)(nil),          // 20: transaction.v1.StartProcessingTransferRequest
+	(*StartProcessingTransferRejected)(nil),         // 21: transaction.v1.StartProcessingTransferRejected
+	(*StartProcessingTransferResponse)(nil),         // 22: transaction.v1.StartProcessingTransferResponse
+	(*ResumeTransactionRequest)(nil),                // 23: transaction.v1.ResumeTransactionRequest
+	(*ResumeTransactionResponse)(nil),               // 24: transaction.v1.ResumeTransactionResponse
+	(*StartTransactionRollbackResponse)(nil),        // 25: transaction.v1.StartTransactionRollbackResponse
+	nil,                                             // 26: transaction.v1.StartInitializingTransactionRequest.TransfersEntry
+	nil,                                             // 27: transaction.v1.StartInitializingTransactionRequest.TransferDependencyEntry
+	nil,                                             // 28: transaction.v1.TransactionInitialized.TransfersEntry
+	nil,                                             // 29: transaction.v1.TransactionInitialized.TransferDependencyEntry
+	(*v1.Money)(nil),                                // 30: shared.v1.Money
 }
 var file_transaction_v1_transaction_proto_depIdxs = []int32{
-	19, // 0: transaction.v1.Transfer.amount:type_name -> shared.v1.Money
-	14, // 1: transaction.v1.StartInitializingTransaction.transfers:type_name -> transaction.v1.StartInitializingTransaction.TransfersEntry
-	15, // 2: transaction.v1.StartInitializingTransaction.transfer_dependency:type_name -> transaction.v1.StartInitializingTransaction.TransferDependencyEntry
-	16, // 3: transaction.v1.TransactionInitialized.memos:type_name -> transaction.v1.TransactionInitialized.MemosEntry
-	17, // 4: transaction.v1.TransactionInitialized.transfers:type_name -> transaction.v1.TransactionInitialized.TransfersEntry
-	18, // 5: transaction.v1.TransactionInitialized.transfer_dependency:type_name -> transaction.v1.TransactionInitialized.TransferDependencyEntry
-	1,  // 6: transaction.v1.StartInitializingTransaction.TransfersEntry.value:type_name -> transaction.v1.Transfer
-	0,  // 7: transaction.v1.TransactionInitialized.MemosEntry.value:type_name -> transaction.v1.Memo
-	1,  // 8: transaction.v1.TransactionInitialized.TransfersEntry.value:type_name -> transaction.v1.Transfer
-	9,  // [9:9] is the sub-list for method output_type
-	9,  // [9:9] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	30, // 0: transaction.v1.Transfer.amount:type_name -> shared.v1.Money
+	26, // 1: transaction.v1.StartInitializingTransactionRequest.transfers:type_name -> transaction.v1.StartInitializingTransactionRequest.TransfersEntry
+	27, // 2: transaction.v1.StartInitializingTransactionRequest.transfer_dependency:type_name -> transaction.v1.StartInitializingTransactionRequest.TransferDependencyEntry
+	28, // 3: transaction.v1.TransactionInitialized.transfers:type_name -> transaction.v1.TransactionInitialized.TransfersEntry
+	29, // 4: transaction.v1.TransactionInitialized.transfer_dependency:type_name -> transaction.v1.TransactionInitialized.TransferDependencyEntry
+	5,  // 5: transaction.v1.StartInitializingTransactionResponse.transaction_initialized:type_name -> transaction.v1.TransactionInitialized
+	6,  // 6: transaction.v1.StartInitializingTransactionResponse.transaction_rejected:type_name -> transaction.v1.TransactionRejected
+	0,  // 7: transaction.v1.TransferRolledBackWithinTransaction.method:type_name -> transaction.v1.RollbackMethod
+	9,  // 8: transaction.v1.StartProcessingTransferResponse.transfer_requested_within_transaction:type_name -> transaction.v1.TransferRequestedWithinTransaction
+	12, // 9: transaction.v1.StartProcessingTransferResponse.transfer_failed_within_transaction:type_name -> transaction.v1.TransferFailedWithinTransaction
+	21, // 10: transaction.v1.StartProcessingTransferResponse.start_processing_transfer_rejected:type_name -> transaction.v1.StartProcessingTransferRejected
+	1,  // 11: transaction.v1.ResumeTransactionResponse.state:type_name -> transaction.v1.TransactionState
+	1,  // 12: transaction.v1.StartTransactionRollbackResponse.state:type_name -> transaction.v1.TransactionState
+	2,  // 13: transaction.v1.StartInitializingTransactionRequest.TransfersEntry.value:type_name -> transaction.v1.Transfer
+	3,  // 14: transaction.v1.StartInitializingTransactionRequest.TransferDependencyEntry.value:type_name -> transaction.v1.TransferIdList
+	2,  // 15: transaction.v1.TransactionInitialized.TransfersEntry.value:type_name -> transaction.v1.Transfer
+	3,  // 16: transaction.v1.TransactionInitialized.TransferDependencyEntry.value:type_name -> transaction.v1.TransferIdList
+	4,  // 17: transaction.v1.TransactionService.StartInitializingTransaction:input_type -> transaction.v1.StartInitializingTransactionRequest
+	20, // 18: transaction.v1.TransactionService.StartProcessingTransfer:input_type -> transaction.v1.StartProcessingTransferRequest
+	23, // 19: transaction.v1.TransactionService.ResumeTransaction:input_type -> transaction.v1.ResumeTransactionRequest
+	14, // 20: transaction.v1.TransactionService.StartTransactionRollback:input_type -> transaction.v1.StartTransactionRollbackRequest
+	7,  // 21: transaction.v1.TransactionService.StartInitializingTransaction:output_type -> transaction.v1.StartInitializingTransactionResponse
+	22, // 22: transaction.v1.TransactionService.StartProcessingTransfer:output_type -> transaction.v1.StartProcessingTransferResponse
+	24, // 23: transaction.v1.TransactionService.ResumeTransaction:output_type -> transaction.v1.ResumeTransactionResponse
+	25, // 24: transaction.v1.TransactionService.StartTransactionRollback:output_type -> transaction.v1.StartTransactionRollbackResponse
+	21, // [21:25] is the sub-list for method output_type
+	17, // [17:21] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_transaction_v1_transaction_proto_init() }
@@ -868,18 +1847,28 @@ func file_transaction_v1_transaction_proto_init() {
 	if File_transaction_v1_transaction_proto != nil {
 		return
 	}
+	file_transaction_v1_transaction_proto_msgTypes[5].OneofWrappers = []any{
+		(*StartInitializingTransactionResponse_TransactionInitialized)(nil),
+		(*StartInitializingTransactionResponse_TransactionRejected)(nil),
+	}
+	file_transaction_v1_transaction_proto_msgTypes[20].OneofWrappers = []any{
+		(*StartProcessingTransferResponse_TransferRequestedWithinTransaction)(nil),
+		(*StartProcessingTransferResponse_TransferFailedWithinTransaction)(nil),
+		(*StartProcessingTransferResponse_StartProcessingTransferRejected)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_transaction_v1_transaction_proto_rawDesc), len(file_transaction_v1_transaction_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   19,
+			NumEnums:      2,
+			NumMessages:   28,
 			NumExtensions: 0,
-			NumServices:   0,
+			NumServices:   1,
 		},
 		GoTypes:           file_transaction_v1_transaction_proto_goTypes,
 		DependencyIndexes: file_transaction_v1_transaction_proto_depIdxs,
+		EnumInfos:         file_transaction_v1_transaction_proto_enumTypes,
 		MessageInfos:      file_transaction_v1_transaction_proto_msgTypes,
 	}.Build()
 	File_transaction_v1_transaction_proto = out.File

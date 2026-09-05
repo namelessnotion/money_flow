@@ -36,7 +36,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("migrate: connect: %v", err)
 	}
-	defer conn.Close(ctx)
+	defer func() { _ = conn.Close(ctx) }()
 
 	if _, err := conn.Exec(ctx, `CREATE TABLE IF NOT EXISTS schema_migrations (
 		version TEXT PRIMARY KEY,
@@ -137,7 +137,7 @@ func applyStep(ctx context.Context, conn *pgx.Conn, dir, version, direction, boo
 	if err != nil {
 		log.Fatalf("migrate: begin: %v", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	if _, err := tx.Exec(ctx, string(sqlBytes)); err != nil {
 		log.Fatalf("migrate: run %s.%s.sql: %v", version, direction, err)

@@ -73,7 +73,7 @@ func TestSelectSourceTokens_SingleTokenCovers(t *testing.T) {
 	mintToken(t, store, lc, testutil.ID("w1"), testutil.ID("t1"), usd(1000))
 	fundToken(t, lc, testutil.ID("t1"), 1000)
 
-	legs, rejection, err := selectSourceTokens(context.Background(), store, lc, testutil.ID("w1"), usd(400))
+	legs, rejection, err := selectSourceTokens(context.Background(), store, lc, testutil.ID("w1"), usd(400), "", nil)
 	if err != nil {
 		t.Fatalf("selectSourceTokens() error = %v", err)
 	}
@@ -95,7 +95,7 @@ func TestSelectSourceTokens_ManyToOneFIFO(t *testing.T) {
 	mintToken(t, store, lc, testutil.ID("w1"), testutil.ID("t2"), usd(300))
 	fundToken(t, lc, testutil.ID("t2"), 300)
 
-	legs, rejection, err := selectSourceTokens(context.Background(), store, lc, testutil.ID("w1"), usd(400))
+	legs, rejection, err := selectSourceTokens(context.Background(), store, lc, testutil.ID("w1"), usd(400), "", nil)
 	if err != nil {
 		t.Fatalf("selectSourceTokens() error = %v", err)
 	}
@@ -121,7 +121,7 @@ func TestSelectSourceTokens_InsufficientBalanceRejects(t *testing.T) {
 	mintToken(t, store, lc, testutil.ID("w1"), testutil.ID("t1"), usd(100))
 	fundToken(t, lc, testutil.ID("t1"), 100)
 
-	legs, rejection, err := selectSourceTokens(context.Background(), store, lc, testutil.ID("w1"), usd(400))
+	legs, rejection, err := selectSourceTokens(context.Background(), store, lc, testutil.ID("w1"), usd(400), "", nil)
 	if err != nil {
 		t.Fatalf("selectSourceTokens() error = %v", err)
 	}

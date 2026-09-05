@@ -46,6 +46,7 @@ message TokenMintedForWallet {
   string id = 1; // wallet id
   string token_id = 2;
   shared.v1.Money capacity = 3;
+  string transaction_id = 4; // empty for a Token minted outside any Transaction
 }
 
 service WalletService {

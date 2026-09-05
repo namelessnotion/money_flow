@@ -20,6 +20,7 @@ import (
 	"github.com/namelessnotion/money_flow/go/internal/id"
 	"github.com/namelessnotion/money_flow/go/internal/ledger"
 	"github.com/namelessnotion/money_flow/go/internal/money"
+	"github.com/namelessnotion/money_flow/go/internal/wallet"
 )
 
 var _ pb.TransferService = (*Server)(nil)
@@ -27,13 +28,21 @@ var _ pb.TransferService = (*Server)(nil)
 // Server implements the Transfer Twirp service. Minting and committing
 // unavoidably cross into TigerBeetle, so like token.Server it holds a
 // ledger.Client.
+//
+// isOpen and transactionExists are both nil-safe (isOpen: wallet's own
+// TokensOfVisibleTo degrades to unfiltered TokensOf behavior on a nil
+// checker; transactionExists: mint_source itself already defaults false, so
+// it is simply never consulted) — every existing call site can keep passing
+// nil for both.
 type Server struct {
-	store  eventstore.Store
-	ledger ledger.Client
+	store             eventstore.Store
+	ledger            ledger.Client
+	isOpen            wallet.TransactionOpenChecker
+	transactionExists TransactionExistsChecker
 }
 
-func NewServer(store eventstore.Store, lc ledger.Client) *Server {
-	return &Server{store: store, ledger: lc}
+func NewServer(store eventstore.Store, lc ledger.Client, isOpen wallet.TransactionOpenChecker, transactionExists TransactionExistsChecker) *Server {
+	return &Server{store: store, ledger: lc, isOpen: isOpen, transactionExists: transactionExists}
 }
 
 // maxConcurrencyAttempts bounds every "load, decide, try to append" loop
@@ -129,6 +138,10 @@ func (s *Server) RequestTransfer(ctx context.Context, req *pb.RequestTransferReq
 	if err := money.Validate("amount", req.GetAmount()); err != nil {
 		return nil, err
 	}
+	if req.GetMintSource() && req.GetTransactionId() == "" {
+		return nil, twirp.InvalidArgumentError("mint_source",
+			"requires transaction_id: only Transaction-owned Transfers may mint a source Token")
+	}
 
 	for attempt := 0; attempt < maxConcurrencyAttempts; attempt++ {
 		events, err := s.store.Load(ctx, AggregateType, req.GetId())
@@ -139,7 +152,12 @@ func (s *Server) RequestTransfer(ctx context.Context, req *pb.RequestTransferReq
 			return s.decidedRequestTransfer(ctx, req.GetId(), events)
 		}
 
-		_, rejection, err := selectSourceTokens(ctx, s.store, s.ledger, req.GetFromWalletId(), req.GetAmount())
+		var rejection *pb.TransferRequestRejected
+		if req.GetMintSource() {
+			rejection, err = validateMintSource(ctx, s.store, s.transactionExists, req.GetTransactionId(), req.GetFromWalletId())
+		} else {
+			_, rejection, err = selectSourceTokens(ctx, s.store, s.ledger, req.GetFromWalletId(), req.GetAmount(), req.GetTransactionId(), s.isOpen)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -152,6 +170,7 @@ func (s *Server) RequestTransfer(ctx context.Context, req *pb.RequestTransferReq
 			event = &pb.TransferRequestAccepted{
 				Id: req.GetId(), FromWalletId: req.GetFromWalletId(), ToWalletId: req.GetToWalletId(),
 				Amount: req.GetAmount(), Stage: req.GetStage(),
+				TransactionId: req.GetTransactionId(), MintSource: req.GetMintSource(),
 			}
 		}
 
@@ -274,6 +293,7 @@ func (s *Server) RequestReversal(ctx context.Context, req *pb.RequestReversalReq
 			event = &pb.ReversalRequestAccepted{
 				Id: req.GetId(), TransferId: req.GetTransferId(),
 				Amount: &sharedpb.Money{MinorUnits: total, Currency: currency}, Stage: req.GetStage(),
+				TransactionId: req.GetTransactionId(),
 			}
 		}
 

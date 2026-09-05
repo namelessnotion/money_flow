@@ -321,6 +321,7 @@ type TokenMintedForWallet struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"` // wallet id
 	TokenId       string                 `protobuf:"bytes,2,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
 	Capacity      *v1.Money              `protobuf:"bytes,3,opt,name=capacity,proto3" json:"capacity,omitempty"`
+	TransactionId string                 `protobuf:"bytes,4,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"` // empty for a Token minted outside any Transaction
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -376,6 +377,13 @@ func (x *TokenMintedForWallet) GetCapacity() *v1.Money {
 	return nil
 }
 
+func (x *TokenMintedForWallet) GetTransactionId() string {
+	if x != nil {
+		return x.TransactionId
+	}
+	return ""
+}
+
 var File_wallet_v1_wallet_proto protoreflect.FileDescriptor
 
 const file_wallet_v1_wallet_proto_rawDesc = "" +
@@ -399,11 +407,12 @@ const file_wallet_v1_wallet_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12>\n" +
 	"\rwallet_opened\x18\x02 \x01(\v2\x17.wallet.v1.WalletOpenedH\x00R\fwalletOpened\x12D\n" +
 	"\x0fwallet_rejected\x18\x03 \x01(\v2\x19.wallet.v1.WalletRejectedH\x00R\x0ewalletRejectedB\b\n" +
-	"\x06result\"o\n" +
+	"\x06result\"\x96\x01\n" +
 	"\x14TokenMintedForWallet\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\btoken_id\x18\x02 \x01(\tR\atokenId\x12,\n" +
-	"\bcapacity\x18\x03 \x01(\v2\x10.shared.v1.MoneyR\bcapacity2J\n" +
+	"\bcapacity\x18\x03 \x01(\v2\x10.shared.v1.MoneyR\bcapacity\x12%\n" +
+	"\x0etransaction_id\x18\x04 \x01(\tR\rtransactionId2J\n" +
 	"\rWalletService\x129\n" +
 	"\x04Open\x12\x16.wallet.v1.OpenRequest\x1a\x17.wallet.v1.OpenResponse\"\x00B=Z;github.com/namelessnotion/money_flow/go/gen/proto/wallet/v1b\x06proto3"
 

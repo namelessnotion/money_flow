@@ -22,6 +22,7 @@ import (
 	holderpb "github.com/namelessnotion/money_flow/go/gen/proto/holder/v1"
 	operationpb "github.com/namelessnotion/money_flow/go/gen/proto/operation/v1"
 	tokenpb "github.com/namelessnotion/money_flow/go/gen/proto/token/v1"
+	transactionpb "github.com/namelessnotion/money_flow/go/gen/proto/transaction/v1"
 	transferpb "github.com/namelessnotion/money_flow/go/gen/proto/transfer/v1"
 	walletpb "github.com/namelessnotion/money_flow/go/gen/proto/wallet/v1"
 	"github.com/namelessnotion/money_flow/go/internal/eventstore"
@@ -29,6 +30,7 @@ import (
 	"github.com/namelessnotion/money_flow/go/internal/ledger"
 	"github.com/namelessnotion/money_flow/go/internal/operation"
 	"github.com/namelessnotion/money_flow/go/internal/token"
+	"github.com/namelessnotion/money_flow/go/internal/transaction"
 	"github.com/namelessnotion/money_flow/go/internal/transfer"
 	"github.com/namelessnotion/money_flow/go/internal/wallet"
 )
@@ -105,11 +107,25 @@ func newMux(store eventstore.Store, health pinger, tb ledger.Client) *http.Serve
 	walletServer := walletpb.NewWalletServiceServer(wallet.NewServer(store))
 	tokenServer := tokenpb.NewTokenServiceServer(token.NewServer(store, tb))
 	operationServer := operationpb.NewOperationServiceServer(operation.NewServer(store))
-	transferServer := transferpb.NewTransferServiceServer(transfer.NewServer(store, tb))
+
+	// transfer.NewServer is built before transaction.NewServer so transfer
+	// can be given transaction.IsOpen/transaction.Exists — both plain
+	// package functions taking (ctx, store, id), not methods on
+	// transaction.Server, so referencing them before any transaction.Server
+	// is constructed is not a chicken-and-egg problem. This keeps transfer
+	// from ever importing transaction: it only ever sees the two checker
+	// func types.
+	isOpen := func(ctx context.Context, transactionID string) (bool, error) { return transaction.IsOpen(ctx, store, transactionID) }
+	exists := func(ctx context.Context, transactionID string) (bool, error) { return transaction.Exists(ctx, store, transactionID) }
+	transferInternal := transfer.NewServer(store, tb, isOpen, exists)
+	transferServer := transferpb.NewTransferServiceServer(transferInternal)
+	transactionServer := transactionpb.NewTransactionServiceServer(transaction.NewServer(store, transferInternal))
+
 	mux.Handle(holderServer.PathPrefix(), holderServer)
 	mux.Handle(walletServer.PathPrefix(), walletServer)
 	mux.Handle(tokenServer.PathPrefix(), tokenServer)
 	mux.Handle(operationServer.PathPrefix(), operationServer)
+	mux.Handle(transactionServer.PathPrefix(), transactionServer)
 	mux.Handle(transferServer.PathPrefix(), transferServer)
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {

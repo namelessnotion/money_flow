@@ -24,7 +24,7 @@ func TestRequestTransfer_OneToOne(t *testing.T) {
 	mintToken(t, store, lc, testutil.ID("w1"), testutil.ID("t1"), usd(1000))
 	fundToken(t, lc, testutil.ID("t1"), 1000)
 
-	server := NewServer(store, lc)
+	server := NewServer(store, lc, nil, nil)
 	ctx := context.Background()
 	resp, err := server.RequestTransfer(ctx, transferRequest(testutil.ID("xfer1"), testutil.ID("w1"), testutil.ID("w2"), usd(400), false))
 	if err != nil {
@@ -70,7 +70,7 @@ func TestRequestTransfer_ManyToOneFIFO(t *testing.T) {
 	mintToken(t, store, lc, testutil.ID("w1"), testutil.ID("t2"), usd(300))
 	fundToken(t, lc, testutil.ID("t2"), 300)
 
-	server := NewServer(store, lc)
+	server := NewServer(store, lc, nil, nil)
 	ctx := context.Background()
 	resp, err := server.RequestTransfer(ctx, transferRequest(testutil.ID("xfer1"), testutil.ID("w1"), testutil.ID("w2"), usd(400), false))
 	if err != nil {
@@ -118,7 +118,7 @@ func TestRequestTransfer_InsufficientBalanceRejects(t *testing.T) {
 	mintToken(t, store, lc, testutil.ID("w1"), testutil.ID("t1"), usd(100))
 	fundToken(t, lc, testutil.ID("t1"), 100)
 
-	server := NewServer(store, lc)
+	server := NewServer(store, lc, nil, nil)
 	ctx := context.Background()
 	resp, err := server.RequestTransfer(ctx, transferRequest(testutil.ID("xfer1"), testutil.ID("w1"), testutil.ID("w2"), usd(400), false))
 	if err != nil {
@@ -152,7 +152,7 @@ func TestRequestTransfer_IsIdempotent(t *testing.T) {
 	mintToken(t, store, lc, testutil.ID("w1"), testutil.ID("t1"), usd(1000))
 	fundToken(t, lc, testutil.ID("t1"), 1000)
 
-	server := NewServer(store, lc)
+	server := NewServer(store, lc, nil, nil)
 	ctx := context.Background()
 	req := transferRequest(testutil.ID("xfer1"), testutil.ID("w1"), testutil.ID("w2"), usd(400), false)
 	if _, err := server.RequestTransfer(ctx, req); err != nil {
@@ -176,7 +176,7 @@ func TestStagedTransfer_HappyPath(t *testing.T) {
 	mintToken(t, store, lc, testutil.ID("w1"), testutil.ID("t1"), usd(1000))
 	fundToken(t, lc, testutil.ID("t1"), 1000)
 
-	server := NewServer(store, lc)
+	server := NewServer(store, lc, nil, nil)
 	ctx := context.Background()
 	resp, err := server.RequestTransfer(ctx, transferRequest(testutil.ID("xfer1"), testutil.ID("w1"), testutil.ID("w2"), usd(400), true))
 	if err != nil {
@@ -244,7 +244,7 @@ func TestCancelStagedTransfer_FromStaged(t *testing.T) {
 	mintToken(t, store, lc, testutil.ID("w1"), testutil.ID("t1"), usd(1000))
 	fundToken(t, lc, testutil.ID("t1"), 1000)
 
-	server := NewServer(store, lc)
+	server := NewServer(store, lc, nil, nil)
 	ctx := context.Background()
 	if _, err := server.RequestTransfer(ctx, transferRequest(testutil.ID("xfer1"), testutil.ID("w1"), testutil.ID("w2"), usd(400), true)); err != nil {
 		t.Fatalf("RequestTransfer(stage=true) error = %v", err)
@@ -284,7 +284,7 @@ func TestCancelStagedTransfer_FromPending(t *testing.T) {
 	mintToken(t, store, lc, testutil.ID("w1"), testutil.ID("t1"), usd(1000))
 	fundToken(t, lc, testutil.ID("t1"), 1000)
 
-	server := NewServer(store, lc)
+	server := NewServer(store, lc, nil, nil)
 	ctx := context.Background()
 	if _, err := server.RequestTransfer(ctx, transferRequest(testutil.ID("xfer1"), testutil.ID("w1"), testutil.ID("w2"), usd(400), true)); err != nil {
 		t.Fatalf("RequestTransfer(stage=true) error = %v", err)
@@ -314,7 +314,7 @@ func TestRequestReversal_OfCommittedTransfer(t *testing.T) {
 	mintToken(t, store, lc, testutil.ID("w1"), testutil.ID("t1"), usd(1000))
 	fundToken(t, lc, testutil.ID("t1"), 1000)
 
-	server := NewServer(store, lc)
+	server := NewServer(store, lc, nil, nil)
 	ctx := context.Background()
 	if _, err := server.RequestTransfer(ctx, transferRequest(testutil.ID("xfer1"), testutil.ID("w1"), testutil.ID("w2"), usd(400), false)); err != nil {
 		t.Fatalf("RequestTransfer() error = %v", err)
@@ -373,7 +373,7 @@ func TestReversal_OfManyToOneProducesOneToMany(t *testing.T) {
 	mintToken(t, store, lc, testutil.ID("w1"), testutil.ID("t2"), usd(300))
 	fundToken(t, lc, testutil.ID("t2"), 300)
 
-	server := NewServer(store, lc)
+	server := NewServer(store, lc, nil, nil)
 	ctx := context.Background()
 	if _, err := server.RequestTransfer(ctx, transferRequest(testutil.ID("xfer1"), testutil.ID("w1"), testutil.ID("w2"), usd(400), false)); err != nil {
 		t.Fatalf("RequestTransfer() error = %v", err)
@@ -418,7 +418,7 @@ func TestCancelAcceptedTransfer_FromAccepted(t *testing.T) {
 		t.Fatalf("seed accepted: %v", err)
 	}
 
-	server := NewServer(store, lc)
+	server := NewServer(store, lc, nil, nil)
 	resp, err := server.CancelAcceptedTransfer(ctx, &pb.CancelAcceptedTransferRequest{Id: transferID, Reason: "changed my mind"})
 	if err != nil {
 		t.Fatalf("CancelAcceptedTransfer() error = %v", err)

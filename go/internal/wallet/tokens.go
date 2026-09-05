@@ -14,8 +14,11 @@ import (
 // Wallet's own stream, alongside the Token's own TokenMinted, in the same
 // atomic append. Pure — no I/O — so transfer's saga can build it without a
 // Server, the same reason wallet.OpenedEvent is a free function.
-func TokenMintedForWalletEvent(walletID, tokenID string, capacity *sharedpb.Money) *pb.TokenMintedForWallet {
-	return &pb.TokenMintedForWallet{Id: walletID, TokenId: tokenID, Capacity: capacity}
+//
+// transactionID tags the Token with its owning Transaction, if any (empty
+// for a Token minted outside any Transaction) — see TokensOfVisibleTo.
+func TokenMintedForWalletEvent(walletID, tokenID string, capacity *sharedpb.Money, transactionID string) *pb.TokenMintedForWallet {
+	return &pb.TokenMintedForWallet{Id: walletID, TokenId: tokenID, Capacity: capacity, TransactionId: transactionID}
 }
 
 // TokensOf returns the ids of every Token minted for walletID, oldest first
@@ -41,4 +44,55 @@ func TokensOf(ctx context.Context, store eventstore.Store, walletID string) ([]s
 		}
 	}
 	return tokens, nil
+}
+
+// TransactionOpenChecker reports whether transactionID (as recorded on a
+// TokenMintedForWallet tag) is still open — has not yet reached a terminal
+// state, and so may still need to reverse the Token it tagged. wallet has no
+// notion of what a "Transaction" even is; this indirection lets it ask the
+// question without importing the transaction package, the same reason
+// ledger.Client is an interface transfer depends on rather than a concrete
+// TigerBeetle type. A nil checker means "treat every tag as already
+// resolved" — i.e. behaves exactly like TokensOf, for callers that don't
+// need transaction-awareness at all.
+type TransactionOpenChecker func(ctx context.Context, transactionID string) (bool, error)
+
+// TokensOfVisibleTo is TokensOf, filtered by ownership: a Token tagged with
+// a DIFFERENT, still-open Transaction is skipped — hidden from FIFO source
+// selection so that Transaction's own compensation can't lose a race against
+// an outside caller spending the same Token down first. A Token that is
+// untagged, tagged with callingTransactionID itself (required for a
+// Transaction's own DAG to chain its Transfers together), or tagged with a
+// Transaction that has since closed, is included.
+func TokensOfVisibleTo(ctx context.Context, store eventstore.Store, walletID, callingTransactionID string, isOpen TransactionOpenChecker) ([]string, error) {
+	events, err := store.Load(ctx, AggregateType, walletID)
+	if err != nil {
+		return nil, twirp.InternalErrorWith(err)
+	}
+
+	var visible []string
+	for _, event := range events {
+		msg, err := event.Decode()
+		if err != nil {
+			return nil, twirp.InternalErrorWith(err)
+		}
+		minted, ok := msg.(*pb.TokenMintedForWallet)
+		if !ok {
+			continue
+		}
+
+		tag := minted.GetTransactionId()
+		if tag == "" || tag == callingTransactionID || isOpen == nil {
+			visible = append(visible, minted.GetTokenId())
+			continue
+		}
+		open, err := isOpen(ctx, tag)
+		if err != nil {
+			return nil, err
+		}
+		if !open {
+			visible = append(visible, minted.GetTokenId())
+		}
+	}
+	return visible, nil
 }

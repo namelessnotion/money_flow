@@ -10,6 +10,7 @@ import (
 	operationpb "github.com/namelessnotion/money_flow/go/gen/proto/operation/v1"
 	sharedpb "github.com/namelessnotion/money_flow/go/gen/proto/shared/v1"
 	tokenpb "github.com/namelessnotion/money_flow/go/gen/proto/token/v1"
+	transactionpb "github.com/namelessnotion/money_flow/go/gen/proto/transaction/v1"
 	transferpb "github.com/namelessnotion/money_flow/go/gen/proto/transfer/v1"
 	walletpb "github.com/namelessnotion/money_flow/go/gen/proto/wallet/v1"
 	"github.com/namelessnotion/money_flow/go/internal/eventstore"
@@ -167,6 +168,49 @@ func TestTransferServiceOverHTTP(t *testing.T) {
 	}
 }
 
+// TestTransactionServiceOverHTTP proves Transaction's own routing/content-
+// negotiation is wired correctly. It deliberately stays shallow — the full
+// DAG/rollback/mint_source-guarantee/cross-transaction-visibility logic is
+// already exhaustively covered by the transaction package's own tests,
+// which call the servers directly; this is only the wire itself.
+func TestTransactionServiceOverHTTP(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestServer(t)
+	walletClient := walletpb.NewWalletServiceProtobufClient(srv.URL, srv.Client())
+	transactionClient := transactionpb.NewTransactionServiceProtobufClient(srv.URL, srv.Client())
+	ctx := context.Background()
+
+	for _, w := range []string{"w1", "w2"} {
+		if _, err := walletClient.Open(ctx, &walletpb.OpenRequest{
+			Id: testutil.ID(w), HolderId: testutil.ID("h1"), Name: w, Allows: sharedpb.Allows_ALLOWS_ONRAMP_AND_OFFRAMP,
+		}); err != nil {
+			t.Fatalf("Open(%s) over HTTP error = %v", w, err)
+		}
+	}
+
+	// mint_source=true against an ALLOWS_ONRAMP_AND_OFFRAMP wallet needs no
+	// pre-funding — the saga mints its own fresh source Token — which keeps
+	// this smoke test from also having to reach into a FakeClient.
+	xferID := testutil.ID("xfer1")
+	resp, err := transactionClient.StartInitializingTransaction(ctx, &transactionpb.StartInitializingTransactionRequest{
+		Id: testutil.ID("txn1"),
+		Transfers: map[string]*transactionpb.Transfer{
+			xferID: {
+				Id: xferID, Amount: &sharedpb.Money{MinorUnits: 500, Currency: "USD"},
+				FromWalletId: testutil.ID("w1"), ToWalletId: testutil.ID("w2"),
+				AutoProcess: true, MintSource: true,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("StartInitializingTransaction() over HTTP error = %v", err)
+	}
+	if resp.GetTransactionInitialized() == nil {
+		t.Fatalf("result = %v, want TransactionInitialized", resp.GetResult())
+	}
+}
+
 func TestWalletServiceOverHTTP(t *testing.T) {
 	t.Parallel()
 
@@ -206,7 +250,7 @@ func TestServicesMountUnderTwirpPrefix(t *testing.T) {
 			if err != nil {
 				t.Fatalf("POST %s error = %v", tc.path, err)
 			}
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 			if resp.StatusCode != tc.want {
 				t.Errorf("POST %s = %d, want %d", tc.path, resp.StatusCode, tc.want)
 			}
@@ -223,7 +267,7 @@ func TestHealthz(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /healthz error = %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("GET /healthz = %d, want %d", resp.StatusCode, http.StatusOK)
 	}

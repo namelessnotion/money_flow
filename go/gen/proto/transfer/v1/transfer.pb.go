@@ -38,7 +38,30 @@ type RequestTransferRequest struct {
 	// true: reserve via TigerBeetle pending transfers and walk
 	// staged -> pending -> posted via Confirm/Cancel/PostPendingTransfer.
 	// false (default): commit immediately.
-	Stage         bool `protobuf:"varint,5,opt,name=stage,proto3" json:"stage,omitempty"`
+	Stage bool `protobuf:"varint,5,opt,name=stage,proto3" json:"stage,omitempty"`
+	// The Transaction that requested this Transfer, if any; empty for a
+	// standalone Transfer. Tags any Token minted for this Transfer (source or
+	// destination) with this id, so wallet.TokensOfVisibleTo can hide it from
+	// every other Transaction's FIFO source selection until this Transaction
+	// closes — the mechanism that keeps a Transaction's compensation from
+	// racing a later, unrelated caller that spends the same Token down first.
+	TransactionId string `protobuf:"bytes,6,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	// true: from_wallet_id has no persistent, FIFO-selectable balance of its
+	// own — this is a funding/control wallet (e.g. Bank Account, Bank Control)
+	// recognizing a fresh inflow right now. prepare() mints a brand-new source
+	// Token for exactly `amount` and uses it as the sole DEBIT leg, skipping
+	// selectSourceTokens's existing-balance FIFO/sufficiency check entirely.
+	// false (default, existing behavior unchanged): FIFO-select from
+	// from_wallet_id's existing Tokens as today. A per-request flag, not
+	// inferred from the Wallet's Allows policy — the same reasoning as
+	// `stage`: the caller (ruby, or Transaction) is the one who knows whether
+	// this specific request represents a genuinely new inflow.
+	//
+	// GUARANTEED, not just conventional: true is only legal when
+	// transaction_id is also set, and only when from_wallet_id both exists
+	// and has an Allows policy including ONRAMP — RequestTransfer enforces
+	// both, not just Transaction's own callers.
+	MintSource    bool `protobuf:"varint,7,opt,name=mint_source,json=mintSource,proto3" json:"mint_source,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -104,6 +127,20 @@ func (x *RequestTransferRequest) GetAmount() *v1.Money {
 func (x *RequestTransferRequest) GetStage() bool {
 	if x != nil {
 		return x.Stage
+	}
+	return false
+}
+
+func (x *RequestTransferRequest) GetTransactionId() string {
+	if x != nil {
+		return x.TransactionId
+	}
+	return ""
+}
+
+func (x *RequestTransferRequest) GetMintSource() bool {
+	if x != nil {
+		return x.MintSource
 	}
 	return false
 }
@@ -187,7 +224,9 @@ type TransferRequestAccepted struct {
 	// Echoes the request's stage flag — the saga has to know, on every resume
 	// from the event log, whether this Transfer takes the staging branch,
 	// and nothing else records that fact once accepted.
-	Stage         bool `protobuf:"varint,7,opt,name=stage,proto3" json:"stage,omitempty"`
+	Stage         bool   `protobuf:"varint,7,opt,name=stage,proto3" json:"stage,omitempty"`
+	TransactionId string `protobuf:"bytes,8,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"` // echoes the request, so prepare() can read it back on resume
+	MintSource    bool   `protobuf:"varint,9,opt,name=mint_source,json=mintSource,proto3" json:"mint_source,omitempty"`         // echoes the request, for the same resume reason
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -267,6 +306,20 @@ func (x *TransferRequestAccepted) GetDebitOperationIds() []string {
 func (x *TransferRequestAccepted) GetStage() bool {
 	if x != nil {
 		return x.Stage
+	}
+	return false
+}
+
+func (x *TransferRequestAccepted) GetTransactionId() string {
+	if x != nil {
+		return x.TransactionId
+	}
+	return ""
+}
+
+func (x *TransferRequestAccepted) GetMintSource() bool {
+	if x != nil {
+		return x.MintSource
 	}
 	return false
 }
@@ -2467,11 +2520,15 @@ func (*PostPendingTransferResponse_PostPendingTransferRejected) isPostPendingTra
 // (see reversalManifest in the implementation), so no new Token is ever
 // minted for a Reversal.
 type RequestReversalRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	TransferId    string                 `protobuf:"bytes,2,opt,name=transfer_id,json=transferId,proto3" json:"transfer_id,omitempty"` // the original, committed Transfer being reversed
-	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
-	Stage         bool                   `protobuf:"varint,4,opt,name=stage,proto3" json:"stage,omitempty"` // same semantics as RequestTransferRequest.stage
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Id         string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TransferId string                 `protobuf:"bytes,2,opt,name=transfer_id,json=transferId,proto3" json:"transfer_id,omitempty"` // the original, committed Transfer being reversed
+	Reason     string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	Stage      bool                   `protobuf:"varint,4,opt,name=stage,proto3" json:"stage,omitempty"` // same semantics as RequestTransferRequest.stage
+	// Audit-only: a reversal never mints a Token, so nothing new to tag, but
+	// recording which Transaction drove it is worth having for symmetry with
+	// RequestTransferRequest.transaction_id.
+	TransactionId string `protobuf:"bytes,5,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2534,6 +2591,13 @@ func (x *RequestReversalRequest) GetStage() bool {
 	return false
 }
 
+func (x *RequestReversalRequest) GetTransactionId() string {
+	if x != nil {
+		return x.TransactionId
+	}
+	return ""
+}
+
 type ReversalRequestAccepted struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -2542,6 +2606,7 @@ type ReversalRequestAccepted struct {
 	Destinations      []*TransferDestination `protobuf:"bytes,4,rep,name=destinations,proto3" json:"destinations,omitempty"` // == original transfer's source Token(s)
 	DebitOperationIds []string               `protobuf:"bytes,5,rep,name=debit_operation_ids,json=debitOperationIds,proto3" json:"debit_operation_ids,omitempty"`
 	Stage             bool                   `protobuf:"varint,6,opt,name=stage,proto3" json:"stage,omitempty"` // echoes the request's stage flag, same reason as TransferRequestAccepted.stage
+	TransactionId     string                 `protobuf:"bytes,7,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -2616,6 +2681,13 @@ func (x *ReversalRequestAccepted) GetStage() bool {
 		return x.Stage
 	}
 	return false
+}
+
+func (x *ReversalRequestAccepted) GetTransactionId() string {
+	if x != nil {
+		return x.TransactionId
+	}
+	return ""
 }
 
 type ReversalRequestRejected struct {
@@ -2772,18 +2844,21 @@ var File_transfer_v1_transfer_proto protoreflect.FileDescriptor
 
 const file_transfer_v1_transfer_proto_rawDesc = "" +
 	"\n" +
-	"\x1atransfer/v1/transfer.proto\x12\vtransfer.v1\x1a\x15shared/v1/money.proto\"\xb0\x01\n" +
+	"\x1atransfer/v1/transfer.proto\x12\vtransfer.v1\x1a\x15shared/v1/money.proto\"\xf8\x01\n" +
 	"\x16RequestTransferRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12$\n" +
 	"\x0efrom_wallet_id\x18\x02 \x01(\tR\ffromWalletId\x12 \n" +
 	"\fto_wallet_id\x18\x03 \x01(\tR\n" +
 	"toWalletId\x12(\n" +
 	"\x06amount\x18\x04 \x01(\v2\x10.shared.v1.MoneyR\x06amount\x12\x14\n" +
-	"\x05stage\x18\x05 \x01(\bR\x05stage\"\x8f\x01\n" +
+	"\x05stage\x18\x05 \x01(\bR\x05stage\x12%\n" +
+	"\x0etransaction_id\x18\x06 \x01(\tR\rtransactionId\x12\x1f\n" +
+	"\vmint_source\x18\a \x01(\bR\n" +
+	"mintSource\"\x8f\x01\n" +
 	"\x13TransferDestination\x12\x1e\n" +
 	"\vto_token_id\x18\x01 \x01(\tR\ttoTokenId\x12(\n" +
 	"\x06amount\x18\x02 \x01(\v2\x10.shared.v1.MoneyR\x06amount\x12.\n" +
-	"\x13credit_operation_id\x18\x03 \x01(\tR\x11creditOperationId\"\xa7\x02\n" +
+	"\x13credit_operation_id\x18\x03 \x01(\tR\x11creditOperationId\"\xef\x02\n" +
 	"\x17TransferRequestAccepted\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12$\n" +
 	"\x0efrom_wallet_id\x18\x02 \x01(\tR\ffromWalletId\x12 \n" +
@@ -2792,7 +2867,10 @@ const file_transfer_v1_transfer_proto_rawDesc = "" +
 	"\x06amount\x18\x04 \x01(\v2\x10.shared.v1.MoneyR\x06amount\x12D\n" +
 	"\fdestinations\x18\x05 \x03(\v2 .transfer.v1.TransferDestinationR\fdestinations\x12.\n" +
 	"\x13debit_operation_ids\x18\x06 \x03(\tR\x11debitOperationIds\x12\x14\n" +
-	"\x05stage\x18\a \x01(\bR\x05stage\"A\n" +
+	"\x05stage\x18\a \x01(\bR\x05stage\x12%\n" +
+	"\x0etransaction_id\x18\b \x01(\tR\rtransactionId\x12\x1f\n" +
+	"\vmint_source\x18\t \x01(\bR\n" +
+	"mintSource\"A\n" +
 	"\x17TransferRequestRejected\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\"\xfb\x01\n" +
@@ -2906,13 +2984,14 @@ const file_transfer_v1_transfer_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12O\n" +
 	"\x12transfer_committed\x18\x02 \x01(\v2\x1e.transfer.v1.TransferCommittedH\x00R\x11transferCommitted\x12o\n" +
 	"\x1epost_pending_transfer_rejected\x18\x03 \x01(\v2(.transfer.v1.PostPendingTransferRejectedH\x00R\x1bpostPendingTransferRejectedB\b\n" +
-	"\x06result\"w\n" +
+	"\x06result\"\x9e\x01\n" +
 	"\x16RequestReversalRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vtransfer_id\x18\x02 \x01(\tR\n" +
 	"transferId\x12\x16\n" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\x12\x14\n" +
-	"\x05stage\x18\x04 \x01(\bR\x05stage\"\x80\x02\n" +
+	"\x05stage\x18\x04 \x01(\bR\x05stage\x12%\n" +
+	"\x0etransaction_id\x18\x05 \x01(\tR\rtransactionId\"\xa7\x02\n" +
 	"\x17ReversalRequestAccepted\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vtransfer_id\x18\x02 \x01(\tR\n" +
@@ -2920,7 +2999,8 @@ const file_transfer_v1_transfer_proto_rawDesc = "" +
 	"\x06amount\x18\x03 \x01(\v2\x10.shared.v1.MoneyR\x06amount\x12D\n" +
 	"\fdestinations\x18\x04 \x03(\v2 .transfer.v1.TransferDestinationR\fdestinations\x12.\n" +
 	"\x13debit_operation_ids\x18\x05 \x03(\tR\x11debitOperationIds\x12\x14\n" +
-	"\x05stage\x18\x06 \x01(\bR\x05stage\"b\n" +
+	"\x05stage\x18\x06 \x01(\bR\x05stage\x12%\n" +
+	"\x0etransaction_id\x18\a \x01(\tR\rtransactionId\"b\n" +
 	"\x17ReversalRequestRejected\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vtransfer_id\x18\x02 \x01(\tR\n" +

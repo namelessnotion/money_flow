@@ -73,12 +73,12 @@ func (s *PostgresStore) AppendAtomic(ctx context.Context, writes ...StreamWrite)
 	if err != nil {
 		return fmt.Errorf("eventstore: begin: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	br := tx.SendBatch(ctx, batch)
 	for range rows {
 		if _, err := br.Exec(); err != nil {
-			br.Close()
+			_ = br.Close()
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == uniqueViolation {
 				return ErrConcurrencyConflict

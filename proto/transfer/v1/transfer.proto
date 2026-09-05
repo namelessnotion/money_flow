@@ -21,6 +21,29 @@ message RequestTransferRequest {
   // staged -> pending -> posted via Confirm/Cancel/PostPendingTransfer.
   // false (default): commit immediately.
   bool stage = 5;
+  // The Transaction that requested this Transfer, if any; empty for a
+  // standalone Transfer. Tags any Token minted for this Transfer (source or
+  // destination) with this id, so wallet.TokensOfVisibleTo can hide it from
+  // every other Transaction's FIFO source selection until this Transaction
+  // closes — the mechanism that keeps a Transaction's compensation from
+  // racing a later, unrelated caller that spends the same Token down first.
+  string transaction_id = 6;
+  // true: from_wallet_id has no persistent, FIFO-selectable balance of its
+  // own — this is a funding/control wallet (e.g. Bank Account, Bank Control)
+  // recognizing a fresh inflow right now. prepare() mints a brand-new source
+  // Token for exactly `amount` and uses it as the sole DEBIT leg, skipping
+  // selectSourceTokens's existing-balance FIFO/sufficiency check entirely.
+  // false (default, existing behavior unchanged): FIFO-select from
+  // from_wallet_id's existing Tokens as today. A per-request flag, not
+  // inferred from the Wallet's Allows policy — the same reasoning as
+  // `stage`: the caller (ruby, or Transaction) is the one who knows whether
+  // this specific request represents a genuinely new inflow.
+  //
+  // GUARANTEED, not just conventional: true is only legal when
+  // transaction_id is also set, and only when from_wallet_id both exists
+  // and has an Allows policy including ONRAMP — RequestTransfer enforces
+  // both, not just Transaction's own callers.
+  bool mint_source = 7;
 }
 
 // One destination Token funded by a Transfer (or Reversal), and the
@@ -48,6 +71,8 @@ message TransferRequestAccepted {
   // from the event log, whether this Transfer takes the staging branch,
   // and nothing else records that fact once accepted.
   bool stage = 7;
+  string transaction_id = 8; // echoes the request, so prepare() can read it back on resume
+  bool mint_source = 9;      // echoes the request, for the same resume reason
 }
 
 message TransferRequestRejected {
@@ -325,6 +350,10 @@ message RequestReversalRequest {
   string transfer_id = 2; // the original, committed Transfer being reversed
   string reason = 3;
   bool stage = 4; // same semantics as RequestTransferRequest.stage
+  // Audit-only: a reversal never mints a Token, so nothing new to tag, but
+  // recording which Transaction drove it is worth having for symmetry with
+  // RequestTransferRequest.transaction_id.
+  string transaction_id = 5;
 }
 
 message ReversalRequestAccepted {
@@ -334,6 +363,7 @@ message ReversalRequestAccepted {
   repeated TransferDestination destinations = 4; // == original transfer's source Token(s)
   repeated string debit_operation_ids = 5;
   bool stage = 6; // echoes the request's stage flag, same reason as TransferRequestAccepted.stage
+  string transaction_id = 7;
 }
 
 message ReversalRequestRejected {

@@ -3,8 +3,7 @@
   <img alt="MoneyFlow" src="assets/logo-light.svg" height="72">
 </picture>
 
-Event-sourced money movement system: a Go event store and ledger backend, a
-Ruby/GraphQL business layer on top of it, and a Vue client.
+Event sourced tokenized transaction system
 
 ## Status
 
@@ -16,7 +15,7 @@ immutable events, and the Vue client lists entities via GraphQL.
 
 ```
 proto/    Protobuf domain messages and Twirp service definitions, shared by go/ and ruby/
-go/       Event-sourced ledger backend (Go + Twirp), backed by TigerBeetle for token accounting
+go/       Event-sourced token based transaction backend (Go + Twirp), backed by TigerBeetle for accounting
 ruby/     Business backend (Ruby + GraphQL), orchestrates money flow via the go/ backend
 client/   Frontend (Vue 3 + Apollo Client 4 + TailwindCSS), talks to ruby/ over GraphQL
 docker/   Dockerfiles and entrypoints for each service, wired together by docker-compose.yml
@@ -63,11 +62,11 @@ make up        # docker compose up -d
 
 This starts:
 
-| Service | Direct port | Proxied at |
-|---|---|---|
-| `client` (Vite) | `:5173` | `https://app.local.namelessnotion.com` |
-| `ruby` (GraphQL) | `:9292` | `https://graphql.local.namelessnotion.com` |
-| `go` (Twirp/RPC) | `:8080` | `https://rpc.local.namelessnotion.com` |
+| Service          | Direct port | Proxied at                                 |
+| ---------------- | ----------- | ------------------------------------------ |
+| `client` (Vite)  | `:5173`     | `https://app.local.namelessnotion.com`     |
+| `ruby` (GraphQL) | `:9292`     | `https://graphql.local.namelessnotion.com` |
+| `go` (Twirp/RPC) | `:8080`     | `https://rpc.local.namelessnotion.com`     |
 
 The Go and Ruby services each run pending migrations on boot. To add the
 proxy subdomains, point them at `127.0.0.1` in `/etc/hosts`, then generate a

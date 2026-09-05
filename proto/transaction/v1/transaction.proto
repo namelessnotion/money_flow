@@ -9,11 +9,6 @@ option go_package = "github.com/namelessnotion/money_flow/go/gen/proto/transacti
 // ** Types **
 // ***********
 
-message Memo {
-  string id = 1;
-  string value = 2;
-}
-
 /* Transaction representation of a Transfer prior to it being requested. We can not use
    messages defined in the Root Aggregate Transfer proto as that is a seperate Root Aggregate and we
    can't cross that boundary. Transfer does expose the interface for requesting a Transfer and we can
@@ -31,6 +26,19 @@ message Transfer {
   // auto_process does not go in the transfer.proto because auto processing only makes
   // sense in the context of a Transaction and only a Transaction can determine if all
   // deps are met for a Transfer to start processing
+
+  // Echoes RequestTransferRequest.stage for this child — Transaction has no
+  // opinion of its own on staging, it just passes the caller's choice through.
+  bool stage = 6;
+  // Echoes RequestTransferRequest.mint_source (see transfer.proto) — set true
+  // for a child whose from_wallet_id is a funding/control wallet with no
+  // persistent selectable balance (e.g. Bank Account, Bank Control), so
+  // prepare() mints a fresh source Token for this leg instead of FIFO-selecting.
+  bool mint_source = 7;
+}
+
+message TransferIdList {
+  repeated string transfer_id = 1;
 }
 
 // ********************************
@@ -38,20 +46,28 @@ message Transfer {
 // ********************************
 
 /* Command to build out a Financial Transaction */
-message StartInitializingTransaction {
+message StartInitializingTransactionRequest {
   string id = 1;
-  string external_guid = 2;
-  string factory_name = 3;
-  string factory_version = 4;
 
-  // Ability to add and remove assets from the system
-  // onramp_manifest repeated (wallet, amount to deposit)
-  // offramp_manifest repeated (wallet, amount to withdrawal)
+  // Opaque to go/ — Ruby's own metadata identifying which business-process
+  // template built this DAG (e.g. "ach_deposit", "v2"). go/ records both
+  // verbatim on TransactionInitialized and never interprets or validates
+  // them; go/ has no factory registry of its own in v1, and this plan does
+  // not add one. The external_guid field an earlier draft of this scaffold
+  // also carried is dropped entirely: id (a caller-supplied UUID) is already
+  // this aggregate's one identity/idempotency key, the same as every other
+  // aggregate in this codebase — a second identifier would need its own
+  // conflict rule (same external_guid, different id?) that nothing requires.
+  string factory_name = 2;
+  string factory_version = 3;
 
   // keyed by the Transfer's own id, so we can do dependency mapping based on id
-  map<string, Transfer> transfers = 6;
+  map<string, Transfer> transfers = 4;
 
-  map<string, string> transfer_dependency = 7;
+  // child_id -> every parent id that must complete before the child becomes
+  // ready (an AND-join). Natively expresses one-to-one, many-to-one,
+  // one-to-many, and many-to-many, with no synthetic chain nodes.
+  map<string, TransferIdList> transfer_dependency = 5;
 
   /***
      Rules:
@@ -67,34 +83,12 @@ message StartInitializingTransaction {
      The order in which A, B and C are processed doesn't matter
      { D => [A, B, C] }   =>  D is dep on A, B and C
 
-     If order mattered you just make B dep on A to make sure A comes before B but doesn't matter if C comes before A
-     { D => [A, B, C],
-       B => [A] }
-
-     it could also be simplified
-
-     { D => [B, C],
-       B => [A] }
-
      - one to many
 
      A gets processed first
      { B => [A],
        C => [A],
        D => [A] }
-
-     inverse of dep map would show that A triggers B,C,D
-
-     if ordered mattered
-     A gets processed first
-     { B => [A, C],
-       C => [A, D],
-       D => [A] }
-
-       which just simplified to
-       { B => [C],
-         C => [D],
-         D => [A] }
 
      - many to many(ish)
 
@@ -109,71 +103,170 @@ message StartInitializingTransaction {
        Y => [N],
        Z => [N] }
 
-     inverse of the depdency mapping (trigger) mapping:
-     { [A, B, C, D] => N,
-       [N] => W,
-       [N] => X,
-       [N] => Y,
-       [N] => Z }
-
-     NOTE: map<string, string> only expresses a single dependency per key, so a
-     many-to-one dependency (D on A, B, C) has to be encoded as the chain
-     simplification above (D => C, C => B, B => A) rather than listed directly.
-     If that turns out to be too limiting once Transaction design resumes,
-     switch transfer_dependency to map<string, TransferIdList> instead.
+     A child with no entry (or an empty list) is a DAG root, ready immediately
+     when the Transaction starts executing.
   */
 }
 
 message TransactionInitialized {
   string id = 1;
-  map<string, Memo> memos = 2;
-
-  // Ability to add and remove assets from the system
-  // onramp_manifest repeated (wallet, amount to deposit)
-  // offramp_manifest repeated (wallet, amount to withdrawal)
-
-  // keyed by the Transfer's own id, so we can do dependency mapping based on id
-  map<string, Transfer> transfers = 6;
-
-  map<string, string> transfer_dependency = 7;
+  string factory_name = 2;
+  string factory_version = 3;
+  map<string, Transfer> transfers = 4;
+  map<string, TransferIdList> transfer_dependency = 5;
 }
 
-message StartBuildingTransaction {
+message TransactionRejected {
   string id = 1;
+  string reason = 2; // cyclic/self dependency, dangling parent reference, empty transfers map, ...
 }
 
-message TransactionBuildingStarted {
+message StartInitializingTransactionResponse {
   string id = 1;
-}
-
-message CompleteBuildingTransaction {
-  string id = 1;
-}
-
-message TransactionBuilt {
-  string id = 1;
-}
-
-message StartTransaction {
-  string id = 1;
+  oneof result {
+    TransactionInitialized transaction_initialized = 2;
+    TransactionRejected transaction_rejected = 3;
+  }
 }
 
 message TransactionStarted {
   string id = 1;
 }
 
+// --- Per-child bookkeeping Transaction records on its OWN stream as it
+// drives each child Transfer forward or back. Not exposed via any RPC —
+// saga-internal, produced only by transaction/saga.go, the same relationship
+// operation.Staged/Performed has to transfer/saga.go.
+
+message TransferRequestedWithinTransaction {
+  string id = 1;
+  string transfer_id = 2;
+}
+
+// auto_process=false, awaiting StartProcessingTransfer.
+message TransferGatedWithinTransaction {
+  string id = 1;
+  string transfer_id = 2;
+}
+
+message TransferCompletedWithinTransaction {
+  string id = 1;
+  string transfer_id = 2;
+}
+
+message TransferFailedWithinTransaction {
+  string id = 1;
+  string transfer_id = 2;
+  string reason = 3;
+}
+
 message TransactionCompleted {
   string id = 1;
 }
 
-message StartTransactionRollback {
+message StartTransactionRollbackRequest {
   string id = 1;
+  string reason = 2;
 }
 
 message TransactionRollbackStarted {
   string id = 1;
+  string reason = 2;
+}
+
+enum RollbackMethod {
+  ROLLBACK_METHOD_UNSPECIFIED = 0;
+  ROLLBACK_METHOD_REVERSED = 1;   // child was Committed -> RequestReversal
+  ROLLBACK_METHOD_CANCELLED = 2;  // child was Accepted/Prepared/Staged/Pending -> Cancel*Transfer
+  ROLLBACK_METHOD_ABANDONED = 3;  // child was only Gated, never requested -> nothing to call
+}
+
+message TransferRolledBackWithinTransaction {
+  string id = 1;
+  string transfer_id = 2;
+  RollbackMethod method = 3;
+  string detail_id = 4; // the reversal Transfer's own id, when method == REVERSED
+}
+
+message TransferRollbackFailedWithinTransaction {
+  string id = 1;
+  string transfer_id = 2;
+  string reason = 3;
 }
 
 message TransactionRolledBack {
   string id = 1;
+  string reason = 2;
+}
+
+// A reversal is itself a Transfer that can independently fail. When the
+// rollback sweep stalls with at least one child that could not be rolled
+// back, the Transaction cannot honestly claim TransactionRolledBack — this
+// is that distinct, operator-attention-required terminal instead, matching
+// how TransferFailed is a true terminal for Transfer rather than something
+// the saga walks back out of.
+message TransactionRollbackFailed {
+  string id = 1;
+  string reason = 2;
+}
+
+message StartProcessingTransferRequest {
+  string id = 1;
+  string transfer_id = 2;
+}
+
+message StartProcessingTransferRejected {
+  string id = 1;
+  string transfer_id = 2;
+  string reason = 3;
+}
+
+message StartProcessingTransferResponse {
+  string id = 1;
+  oneof result {
+    TransferRequestedWithinTransaction transfer_requested_within_transaction = 2;
+    TransferFailedWithinTransaction transfer_failed_within_transaction = 3;
+    StartProcessingTransferRejected start_processing_transfer_rejected = 4;
+  }
+}
+
+enum TransactionState {
+  TRANSACTION_STATE_UNSPECIFIED = 0;
+  TRANSACTION_STATE_INITIALIZED = 1;
+  TRANSACTION_STATE_STARTED = 2;
+  TRANSACTION_STATE_ROLLBACK_STARTED = 3;
+  TRANSACTION_STATE_COMPLETED = 4;
+  TRANSACTION_STATE_ROLLED_BACK = 5;
+  TRANSACTION_STATE_ROLLBACK_FAILED = 6;
+  TRANSACTION_STATE_REJECTED = 7;
+}
+
+// No naturally-repeated entry point exists for Transaction the way every
+// Transfer RPC re-runs runSaga on call: a staged child settles via calls
+// made on ITS OWN id (ConfirmStagedTransfer/PostPendingTransfer), which the
+// owning Transaction has no way to learn about except by being asked to
+// look again. Contract: ruby calls the child's own staged-settlement RPC,
+// then calls ResumeTransaction(owning_transaction_id) — no polling, no
+// background worker, matching the synchronous-in-process model the Transfer
+// saga itself already uses.
+message ResumeTransactionRequest {
+  string id = 1;
+}
+
+message ResumeTransactionResponse {
+  string id = 1;
+  TransactionState state = 2;
+  string reason = 3;
+}
+
+message StartTransactionRollbackResponse {
+  string id = 1;
+  TransactionState state = 2;
+}
+
+service TransactionService {
+  rpc StartInitializingTransaction(StartInitializingTransactionRequest) returns (StartInitializingTransactionResponse) {}
+  rpc StartProcessingTransfer(StartProcessingTransferRequest) returns (StartProcessingTransferResponse) {}
+  rpc ResumeTransaction(ResumeTransactionRequest) returns (ResumeTransactionResponse) {}
+  rpc StartTransactionRollback(StartTransactionRollbackRequest) returns (StartTransactionRollbackResponse) {}
 }
