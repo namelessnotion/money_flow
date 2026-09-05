@@ -1,6 +1,6 @@
-# Financial Transaction System
+# Tokenized Transaction System
 
-This is a fincial transaction system.
+This is a tokenized transaction system.
 
 Event Sourced, CQRS, and DDD are used to implement the system.
 
