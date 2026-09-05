@@ -14,6 +14,7 @@ module Types
 
       enums do
         Bank = new('bank')                     # ACH Bank Account
+        BankControl = new('bank_control')      # Bank's platform-side control wallet
         DebitCard = new('debit_card')          # Debit Card Account
         UnclearedCash = new('uncleared_cash')  # Cash waiting to be cleared
         ClearedCash = new('cleared_cash')      # Cash that has cleared
@@ -37,7 +38,7 @@ module Types
       sig { returns(Symbol) }
       def allows
         case self
-        when Bank then :ALLOWS_ONRAMP_AND_OFFRAMP
+        when Bank, BankControl then :ALLOWS_ONRAMP_AND_OFFRAMP
         when DebitCard then :ALLOWS_ONRAMP
         else :ALLOWS_NONE
         end

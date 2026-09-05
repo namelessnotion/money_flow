@@ -7,18 +7,21 @@ RSpec.describe Types::Enums::AccountType do
     # The T::Enum default would give "debitcard"/"unclearedcash", and these
     # strings are persisted in accounts.type and sent as a Wallet's name.
     expect(described_class.values.map(&:serialize)).to contain_exactly(
-      'bank', 'debit_card', 'uncleared_cash', 'cleared_cash', 'cash', 'gain', 'loss'
+      'bank', 'bank_control', 'debit_card', 'uncleared_cash', 'cleared_cash', 'cash', 'gain', 'loss'
     )
   end
 
   describe '#allows' do
     it 'lets only funding instruments cross the platform boundary' do
       expect(described_class::Bank.allows).to eq(:ALLOWS_ONRAMP_AND_OFFRAMP)
+      expect(described_class::BankControl.allows).to eq(:ALLOWS_ONRAMP_AND_OFFRAMP)
       expect(described_class::DebitCard.allows).to eq(:ALLOWS_ONRAMP)
     end
 
     it 'permits neither direction for everything else' do
-      internal = described_class.values - [described_class::Bank, described_class::DebitCard]
+      internal = described_class.values - [
+        described_class::Bank, described_class::BankControl, described_class::DebitCard
+      ]
       expect(internal.map(&:allows).uniq).to eq([:ALLOWS_NONE])
     end
 
